@@ -1,0 +1,164 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Офіційний сайт села Борове — новини, оголошення, попутки">
+  <meta name="theme-color" content="#1A4731">
+  <title>Борове — Сільська газета</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!--#include virtual="/partials/header.html" -->
+
+<!-- TICKER -->
+<div class="news-ticker" aria-hidden="true">
+  <span class="ticker-inner">
+    <span class="ticker-label">Новини</span>
+    День села — 1 травня, о 14:00 &nbsp;&#9679;&nbsp;
+    Планове відключення світла: 27 квітня 09:00–15:00 &nbsp;&#9679;&nbsp;
+    Прийом лікаря: щочетверга 10:00–14:00 &nbsp;&#9679;&nbsp;
+    Збори мешканців щодо ремонту дороги: 28 квітня о 18:00 &nbsp;&#9679;&nbsp;
+    Новий графік вивезення сміття — з 1 травня &nbsp;&#9679;&nbsp;
+  </span>
+</div>
+
+<!-- MAIN -->
+<main>
+  <div class="container">
+    <div class="main-layout">
+
+      <!-- CONTENT -->
+      <section class="content-main" aria-label="Новини та статті">
+
+        <!-- FEATURED -->
+        <div id="featuredArticle"></div>
+
+        <hr class="divider">
+        <h2 class="section-title">
+          <span class="icon">&#128664;</span> Попутки
+          <a href="rides.html" class="btn-read" style="margin-left:auto;font-size:.8rem">Всі попутки &#8594;</a>
+        </h2>
+        <div id="indexRideList">
+          <div class="empty-state"><div class="empty-icon">&#128664;</div><p>Завантаження...</p></div>
+        </div>
+
+        <hr class="divider">
+        <h2 class="section-title">
+          <span class="icon">&#128717;</span> Базар
+          <a href="shop.html" class="btn-read" style="margin-left:auto;font-size:.8rem">Всі товари &#8594;</a>
+        </h2>
+        <div id="homeProductGrid">
+          <div class="empty-state"><div class="empty-icon">&#128717;</div><p>Завантаження...</p></div>
+        </div>
+
+        <hr class="divider">
+        <h2 class="section-title">
+          <span class="icon">&#128247;</span> Фотогалерея
+          <a href="gallery.html" class="btn-read" style="margin-left:auto;font-size:.8rem">Всі альбоми &#8594;</a>
+        </h2>
+
+        <div class="album-grid" id="indexAlbumGrid">
+          <div class="empty-state"><div class="empty-icon">&#128247;</div><p>Завантаження...</p></div>
+        </div>
+
+        <hr class="divider">
+        <h2 class="section-title">
+          <span class="icon">&#128240;</span> Останні новини
+          <a href="articles.html" class="btn-read" style="margin-left:auto;font-size:.8rem">Всі статті &#8594;</a>
+        </h2>
+
+        <div class="article-grid" id="indexArticleGrid">
+          <div class="empty-state"><div class="empty-icon">&#128240;</div><p>Завантаження...</p></div>
+        </div>
+
+      </section>
+
+      <!-- SIDEBAR -->
+      <aside class="content-sidebar" aria-label="Бічна панель">
+
+        <!-- Weather widget -->
+        <div class="widget fade-in">
+          <div class="widget-header">&#9925; Погода в Боровому</div>
+          <div id="weatherWidgetBody" class="widget-body">
+            <div class="weather-loading">&#8987; Завантаження...</div>
+          </div>
+        </div>
+
+        <!-- Announcements widget -->
+        <div class="widget fade-in">
+          <div class="widget-header">&#128203; Оголошення</div>
+          <div class="widget-body" id="sideAnnList">
+            <div class="empty-state"><div class="empty-icon">&#128203;</div><p>Завантаження...</p></div>
+          </div>
+          <div style="padding:0 16px 14px;text-align:right">
+            <a href="announcements.html" class="btn-read">Всі оголошення &#8594;</a>
+          </div>
+        </div>
+
+        <!-- Top product widget -->
+        <div class="widget fade-in" id="topProductWidget" style="display:none">
+          <div class="widget-header">&#128293; Топ товар</div>
+          <div id="topProductBody" class="top-product-wrap"></div>
+        </div>
+
+        <!-- Contacts widget -->
+        <div class="widget fade-in">
+          <div class="widget-header">&#128222; Корисні контакти</div>
+          <div class="widget-body">
+            <ul class="contact-list">
+              <li>
+                <div class="c-icon">&#127968;</div>
+                <div>
+                  <div class="c-label">Сільська рада</div>
+                  <div class="c-val">(067) 123-45-67</div>
+                </div>
+              </li>
+              <li>
+                <div class="c-icon">&#128657;</div>
+                <div>
+                  <div class="c-label">Швидка допомога</div>
+                  <div class="c-val">103</div>
+                </div>
+              </li>
+              <li>
+                <div class="c-icon">&#128293;</div>
+                <div>
+                  <div class="c-label">Пожежна охорона</div>
+                  <div class="c-val">101</div>
+                </div>
+              </li>
+              <li>
+                <div class="c-icon">&#128268;</div>
+                <div>
+                  <div class="c-label">Аварія ел. мережі</div>
+                  <div class="c-val">0800-500-800</div>
+                </div>
+              </li>
+              <li>
+                <div class="c-icon">&#128268;</div>
+                <div>
+                  <div class="c-label">Аварія газу</div>
+                  <div class="c-val">0800-501-112</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+  </div>
+</main>
+
+<!--#include virtual="/partials/footer.html" -->
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="js/main.js"></script>
+</body>
+</html>

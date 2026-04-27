@@ -1,0 +1,116 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Оголошення села Борове — актуальна інформація для жителів">
+  <meta name="theme-color" content="#1A4731">
+  <title>Оголошення — Борове</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!--#include virtual="/partials/header.html" -->
+
+<!-- PAGE HERO -->
+<div class="page-hero">
+  <h1>&#128203; Оголошення</h1>
+  <p>Актуальна інформація для жителів громади</p>
+</div>
+
+<!-- MAIN -->
+<main>
+  <div class="container">
+    <div class="main-layout">
+
+      <!-- LIST + FILTERS -->
+      <section class="content-main" aria-label="Список оголошень">
+
+        <div class="ann-filters fade-in" role="group" aria-label="Фільтр оголошень">
+          <button class="filter-btn active" data-filter="all">&#128209; Всі</button>
+          <button class="filter-btn" data-filter="urgent">&#128680; Термінові</button>
+          <button class="filter-btn" data-filter="event">&#127882; Події</button>
+          <button class="filter-btn" data-filter="info">&#8505;&#65039; Інформація</button>
+          <button class="filter-btn" data-filter="services">&#127973; Послуги</button>
+        </div>
+
+        <div id="annList" aria-live="polite">
+          <div class="empty-state"><div class="empty-icon">&#128203;</div><p>Завантаження...</p></div>
+        </div>
+        <div id="annPagination" class="pagination"></div>
+
+      </section>
+
+      <!-- SIDEBAR -->
+      <aside class="content-sidebar" aria-label="Додати оголошення">
+
+        <button class="form-mobile-toggle" id="annFormToggle" aria-expanded="false" aria-controls="annFormSection">
+          &#128221; Додати оголошення
+        </button>
+
+        <div class="add-form-section" id="annFormSection">
+          <div class="add-form fade-in" id="annFormWrap">
+            <h3>&#128221; Додати оголошення</h3>
+            <form id="addAnnForm" novalidate>
+              <div class="form-group">
+                <label for="annTitle">Заголовок *</label>
+                <input type="text" id="annTitle" name="annTitle" placeholder="Коротко про що оголошення" required maxlength="120">
+              </div>
+              <div class="form-group">
+                <label for="annType">Категорія *</label>
+                <select id="annType" name="annType" required>
+                  <option value="info">&#8505;&#65039; Інформація</option>
+                  <option value="event">&#127882; Подія</option>
+                  <option value="urgent">&#128680; Терміново</option>
+                  <option value="services">&#127973; Послуги</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="annBody">Текст *</label>
+                <textarea id="annBody" name="annBody" placeholder="Детальний опис..." required maxlength="800"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="annContact">Контактна інформація</label>
+                <input type="text" id="annContact" name="annContact" placeholder="Телефон або ім'я" maxlength="100">
+              </div>
+              <div class="form-group">
+                <label>Фото (необов'язково)</label>
+                <label class="file-upload-label" id="annImageLabel" for="annImage">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <span id="annImageName">Вибрати фото</span>
+                </label>
+                <input type="file" id="annImage" name="annImage" accept="image/*" class="file-upload-input">
+              </div>
+              <button type="submit" class="btn-submit">&#128228; Опублікувати</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="widget fade-in" style="margin-top:20px">
+          <div class="widget-header">&#128204; Категорії</div>
+          <div class="widget-body">
+            <ul class="legend-list">
+              <li><span class="ann-tag urgent">Терміново</span> важлива інформація</li>
+              <li><span class="ann-tag event">Подія</span> свята та заходи</li>
+              <li><span class="ann-tag info">Інформація</span> загальні новини</li>
+              <li><span class="ann-tag services">Послуги</span> торгівля та сервіс</li>
+            </ul>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+  </div>
+</main>
+
+<!--#include virtual="/partials/footer.html" -->
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="js/main.js"></script>
+</body>
+</html>

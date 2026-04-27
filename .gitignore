@@ -1,0 +1,47 @@
+# ── OS / Editor ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.sublime-workspace
+
+# ── Docker runtime (live copy, regenerated from backend-src) ──
+backend/vendor/
+backend/storage/logs/*.log
+backend/storage/framework/cache/
+backend/storage/framework/sessions/
+backend/storage/framework/views/
+backend/public/storage
+backend/public/hot
+backend/.env
+backend/.phpunit.result.cache
+backend/.phpunit.cache/
+
+# ── Uploaded user files (served via Docker volume) ────────
+backend/storage/app/public/avatars/
+backend/storage/app/public/photos/
+backend/storage/app/public/announcements/
+
+# ── Laravel backend-src secrets ───────────────────────────
+backend-src/.env
+backend-src/.env.*
+backend-src/vendor/
+backend-src/storage/logs/*.log
+backend-src/storage/framework/cache/
+backend-src/storage/framework/sessions/
+backend-src/storage/framework/views/
+backend-src/.phpunit.result.cache
+backend-src/.phpunit.cache/
+
+# ── Node / build tools ────────────────────────────────────
+node_modules/
+npm-debug.log*
+
+# ── Local images downloaded at dev time ───────────────────
+img/header-village.jpg
+
+# ── Misc ──────────────────────────────────────────────────
+*.log
+*.bak
+*.tmp
