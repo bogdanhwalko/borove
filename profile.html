@@ -1,15 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!--#include virtual="/partials/head.html" -->
   <meta name="description" content="Мій профіль — Борове">
-  <meta name="theme-color" content="#1A4731">
   <title>Мій профіль — Борове</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
@@ -26,7 +20,7 @@
     <div id="profileGate">
       <div class="empty-state">
         <div class="empty-icon">&#128274;</div>
-        <p>Щоб переглянути профіль, потрібно <a href="auth.html">увійти</a></p>
+        <p>Щоб переглянути профіль, потрібно <a href="/auth">увійти</a></p>
       </div>
     </div>
 
@@ -143,8 +137,6 @@
 
 <!--#include virtual="/partials/footer.html" -->
 
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-<script src="js/main.js"></script>
+<!--#include virtual="/partials/foot.html" -->
 </body>
 </html>

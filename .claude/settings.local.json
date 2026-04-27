@@ -39,7 +39,9 @@
       "Bash(python3 -m json.tool)",
       "Bash(curl -sv \"http://localhost/api/articles?per_page=2\")",
       "Bash(curl -s \"http://localhost:8000/api/articles?per_page=2\")",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('total:', d['total'], '| items:', len\\(d['data']\\)\\)\")"
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('total:', d['total'], '| items:', len\\(d['data']\\)\\)\")",
+      "Bash(curl -sI \"http://localhost:8000/shop\")",
+      "Bash(curl -sI \"http://localhost:8000/rides\")"
     ]
   }
 }

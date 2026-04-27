@@ -1,15 +1,9 @@
 ﻿<!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!--#include virtual="/partials/head.html" -->
   <meta name="description" content="Офіційний сайт села Борове — новини, оголошення, попутки">
-  <meta name="theme-color" content="#1A4731">
   <title>Борове — Сільська газета</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
@@ -41,7 +35,7 @@
         <hr class="divider">
         <h2 class="section-title">
           <span class="icon">&#128664;</span> Попутки
-          <a href="rides.html" class="btn-read" style="margin-left:auto;font-size:.8rem">Всі попутки &#8594;</a>
+          <a href="/rides" class="btn-read" style="margin-left:auto;font-size:.8rem">Всі попутки &#8594;</a>
         </h2>
         <div id="indexRideList">
           <div class="empty-state"><div class="empty-icon">&#128664;</div><p>Завантаження...</p></div>
@@ -50,7 +44,7 @@
         <hr class="divider">
         <h2 class="section-title">
           <span class="icon">&#128717;</span> Базар
-          <a href="shop.html" class="btn-read" style="margin-left:auto;font-size:.8rem">Всі товари &#8594;</a>
+          <a href="/shop" class="btn-read" style="margin-left:auto;font-size:.8rem">Всі товари &#8594;</a>
         </h2>
         <div id="homeProductGrid">
           <div class="empty-state"><div class="empty-icon">&#128717;</div><p>Завантаження...</p></div>
@@ -59,7 +53,7 @@
         <hr class="divider">
         <h2 class="section-title">
           <span class="icon">&#128247;</span> Фотогалерея
-          <a href="gallery.html" class="btn-read" style="margin-left:auto;font-size:.8rem">Всі альбоми &#8594;</a>
+          <a href="/gallery" class="btn-read" style="margin-left:auto;font-size:.8rem">Всі альбоми &#8594;</a>
         </h2>
 
         <div class="album-grid" id="indexAlbumGrid">
@@ -69,7 +63,7 @@
         <hr class="divider">
         <h2 class="section-title">
           <span class="icon">&#128240;</span> Останні новини
-          <a href="articles.html" class="btn-read" style="margin-left:auto;font-size:.8rem">Всі статті &#8594;</a>
+          <a href="/articles" class="btn-read" style="margin-left:auto;font-size:.8rem">Всі статті &#8594;</a>
         </h2>
 
         <div class="article-grid" id="indexArticleGrid">
@@ -96,7 +90,7 @@
             <div class="empty-state"><div class="empty-icon">&#128203;</div><p>Завантаження...</p></div>
           </div>
           <div style="padding:0 16px 14px;text-align:right">
-            <a href="announcements.html" class="btn-read">Всі оголошення &#8594;</a>
+            <a href="/announcements" class="btn-read">Всі оголошення &#8594;</a>
           </div>
         </div>
 
@@ -157,8 +151,6 @@
 
 <!--#include virtual="/partials/footer.html" -->
 
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-<script src="js/main.js"></script>
+<!--#include virtual="/partials/foot.html" -->
 </body>
 </html>

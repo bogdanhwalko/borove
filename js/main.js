@@ -1,4 +1,4 @@
-/* Village site — main.js */
+﻿/* Village site — main.js */
 (function () {
   'use strict';
 
@@ -100,12 +100,10 @@
 
   /* ── active nav link ─────────────────────────── */
   function initActiveLink() {
-    var page = location.pathname.split('/').pop() || 'index.html';
+    var path = location.pathname.replace(/\/$/, '') || '/';
     $$('.site-nav a').forEach(function (a) {
-      var href = a.getAttribute('href');
-      if (href === page || (page === '' && href === 'index.html')) {
-        a.classList.add('active');
-      }
+      var href = (a.getAttribute('href') || '').split('?')[0].replace(/\/$/, '') || '/';
+      if (href === path) a.classList.add('active');
     });
   }
 
@@ -228,7 +226,7 @@
       formWrap.innerHTML =
         '<div class="form-auth-notice">' +
           '<div class="form-auth-icon">&#128274;</div>' +
-          '<p>Щоб додати оголошення, потрібно <a href="auth.html">увійти</a></p>' +
+          '<p>Щоб додати оголошення, потрібно <a href="/auth">увійти</a></p>' +
         '</div>';
     } else if (formWrap && user) {
       var contactEl = $('#annContact');
@@ -432,7 +430,7 @@
       formWrap.innerHTML =
         '<div class="form-auth-notice">' +
           '<div class="form-auth-icon">&#128274;</div>' +
-          '<p>Щоб додати попутку, потрібно <a href="auth.html">увійти</a></p>' +
+          '<p>Щоб додати попутку, потрібно <a href="/auth">увійти</a></p>' +
         '</div>';
     } else if (formWrap && user) {
       var nameEl = $('#rideName');
@@ -655,8 +653,8 @@
 
         container.innerHTML =
           '<nav class="article-breadcrumb" aria-label="Навігація">' +
-            '<a href="index.html">Головна</a><span>›</span>' +
-            '<a href="index.html">Новини</a><span>›</span>' +
+            '<a href="/">Головна</a><span>›</span>' +
+            '<a href="/">Новини</a><span>›</span>' +
             escHtml(a.category) +
           '</nav>' +
           '<span class="article-category">' + escHtml(a.category) + '</span>' +
@@ -667,7 +665,7 @@
             '<span>&#128065; ' + a.views + ' переглядів</span>' +
           '</div>' +
           a.body +
-          '<a href="index.html" class="article-back">&#8592; Повернутись до новин</a>';
+          '<a href="/" class="article-back">&#8592; Повернутись до новин</a>';
       })
       .catch(function () {
         container.innerHTML = '<p>Статтю не знайдено або сталася помилка.</p>';
@@ -863,7 +861,7 @@
         return;
       }
       grid.innerHTML = loadedAlbums.map(function (a) {
-        return '<a href="album.html?slug=' + a.slug + '" class="album-cover fade-in">' +
+        return '<a href="/album?slug=' + a.slug + '" class="album-cover fade-in">' +
           '<img src="' + albumCoverUrl(a, 800, 600) + '" alt="' + escHtml(a.title) + '" loading="lazy">' +
           '<div class="album-cover-overlay">' +
             '<div class="album-cover-title">' + escHtml(a.title) + '</div>' +
@@ -934,7 +932,7 @@
               '<span>&#128065; ' + (a.views || 0) + ' переглядів</span>' +
             '</div>' +
             '<p>' + escHtml(a.summary) + '</p>' +
-            '<a href="article.html?slug=' + escHtml(a.slug) + '" class="btn-read">Читати далі &#8594;</a>' +
+            '<a href="/article?slug=' + escHtml(a.slug) + '" class="btn-read">Читати далі &#8594;</a>' +
           '</div>' +
         '</article>';
     }
@@ -956,7 +954,7 @@
             '<p>' + escHtml(a.summary) + '</p>' +
             '<div class="card-footer">' +
               '<span class="card-date">&#128197; ' + fmtIsoDate(a.published_at ? a.published_at.substring(0, 10) : '') + '</span>' +
-              '<a href="article.html?slug=' + escHtml(a.slug) + '" class="btn-read">Читати &#8594;</a>' +
+              '<a href="/article?slug=' + escHtml(a.slug) + '" class="btn-read">Читати &#8594;</a>' +
             '</div>' +
           '</div>' +
         '</article>';
@@ -990,7 +988,7 @@
       .then(function (resp) {
         var recent = resp.data || [];
         grid.innerHTML = recent.map(function (a) {
-          return '<a href="album.html?slug=' + a.slug + '" class="album-cover fade-in">' +
+          return '<a href="/album?slug=' + a.slug + '" class="album-cover fade-in">' +
             '<img src="' + albumCoverUrl(a, 800, 600) + '" alt="' + escHtml(a.title) + '" loading="lazy">' +
             '<div class="album-cover-overlay">' +
               '<div class="album-cover-title">' + escHtml(a.title) + '</div>' +
@@ -1140,7 +1138,7 @@
         ? '<img src="/storage/' + user.avatar_path + '" class="nav-avatar" alt="">'
         : '<span class="nav-avatar nav-avatar--initials">' + escHtml((user.first_name || user.nickname || '?')[0].toUpperCase()) + '</span>';
       li.innerHTML =
-        (user.is_admin ? '<a href="admin.html" class="btn-nav-admin" title="Адмінпанель">&#9881;</a>' : '') +
+        (user.is_admin ? '<a href="/admin" class="btn-nav-admin" title="Адмінпанель">&#9881;</a>' : '') +
         '<span class="nav-user-info">' + avatarHtml + display + '</span>' +
         '<button class="btn-nav-logout" id="btnNavLogout">Вийти</button>';
 
@@ -1174,7 +1172,7 @@
         });
       }
     } else {
-      li.innerHTML = '<a href="auth.html" class="btn-nav-login"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Увійти</a>';
+      li.innerHTML = '<a href="/auth" class="btn-nav-login"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Увійти</a>';
     }
   }
 
@@ -1232,7 +1230,7 @@
     var registerForm = document.getElementById('registerForm');
     if (!loginForm && !registerForm) return;
 
-    if (getCachedUser()) { window.location.replace('index.html'); return; }
+    if (getCachedUser()) { window.location.replace('/'); return; }
 
     var tabs = Array.prototype.slice.call(document.querySelectorAll('.auth-tab'));
 
@@ -1300,7 +1298,7 @@
           }
           saveSession(r.d.user, r.d.token);
           showToast('Ласкаво просимо, ' + (r.d.user.nickname || r.d.user.first_name) + '!');
-          setTimeout(function () { window.location.href = 'index.html'; }, 700);
+          setTimeout(function () { window.location.href = '/'; }, 700);
         })
         .catch(function () { showErr(loginForm, 'Сервер недоступний. Спробуйте пізніше.'); })
         .finally(function () { setLoading(btn, false); });
@@ -1353,7 +1351,7 @@
           }
           saveSession(r.d.user, r.d.token);
           showToast('Реєстрацію завершено! Ласкаво просимо, ' + r.d.user.nickname + '!');
-          setTimeout(function () { window.location.href = 'index.html'; }, 700);
+          setTimeout(function () { window.location.href = '/'; }, 700);
         })
         .catch(function () { showErr(registerForm, 'Сервер недоступний. Спробуйте пізніше.'); })
         .finally(function () { setLoading(btn, false); });
@@ -1467,13 +1465,13 @@
                 '<div class="shop-header-meta">' +
                   (ownerName ? '&#128100; ' + escHtml(ownerName) + ' &nbsp;&middot;&nbsp; ' : '') +
                   '&#128722; ' + (shop.products_count || 0) + ' товар' + pluralUa(shop.products_count || 0) +
-                  ' &nbsp;&middot;&nbsp; <a href="shop.html" class="shop-header-back">&#8592; Всі товари</a>' +
+                  ' &nbsp;&middot;&nbsp; <a href="/shop" class="shop-header-back">&#8592; Всі товари</a>' +
                 '</div>' +
               '</div>' +
             '</div>';
         })
         .catch(function () {
-          if (headerEl) headerEl.innerHTML = '<div class="shop-header-banner"><p>Магазин не знайдено. <a href="shop.html">&#8592; Назад</a></p></div>';
+          if (headerEl) headerEl.innerHTML = '<div class="shop-header-banner"><p>Магазин не знайдено. <a href="/shop">&#8592; Назад</a></p></div>';
         });
     }
 
@@ -1594,7 +1592,7 @@
         wrap.innerHTML =
           '<div class="form-auth-notice">' +
             '<div class="form-auth-icon">&#128274;</div>' +
-            '<p>Щоб керувати магазином, потрібно <a href="auth.html">увійти</a></p>' +
+            '<p>Щоб керувати магазином, потрібно <a href="/auth">увійти</a></p>' +
           '</div>';
         return;
       }
@@ -1649,7 +1647,7 @@
 
         /* buy requests link */
         html += '<div class="shop-requests-link-wrap">' +
-          '<a href="requests.html" class="btn-requests-link">' +
+          '<a href="/requests" class="btn-requests-link">' +
             '&#128276; Запити на покупку' +
             (requests && requests.length ? ' <span class="pending-badge">' + requests.length + '</span>' : '') +
           '</a>' +
@@ -1761,7 +1759,7 @@
       wrap.innerHTML =
         '<div class="form-auth-notice">' +
           '<div class="form-auth-icon">&#128274;</div>' +
-          '<p>Щоб переглянути запити, потрібно <a href="auth.html">увійти</a></p>' +
+          '<p>Щоб переглянути запити, потрібно <a href="/auth">увійти</a></p>' +
         '</div>';
       return;
     }
@@ -1985,7 +1983,7 @@
       if (gate) gate.innerHTML =
         '<div class="form-auth-notice">' +
           '<div class="form-auth-icon">&#128274;</div>' +
-          '<p>Доступ лише для адміністраторів. <a href="auth.html">Увійти</a></p>' +
+          '<p>Доступ лише для адміністраторів. <a href="/auth">Увійти</a></p>' +
         '</div>';
       return;
     }
