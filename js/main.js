@@ -1127,17 +1127,17 @@
   function initUserArea() {
     var li = document.getElementById('navAuthLi');
     if (!li) return;
-    var user = getCachedUser();
+    var user  = getCachedUser();
+    var token = getToken();
+    if (!user || !token) { clearSession(); user = null; }
     if (user) {
-      var profileLi = document.getElementById('navProfileLi');
-      if (profileLi) profileLi.style.display = '';
       var display = escHtml(user.nickname || user.first_name || 'Користувач');
       var avatarHtml = user.avatar_path
         ? '<img src="/storage/' + user.avatar_path + '" class="nav-avatar" alt="">'
         : '<span class="nav-avatar nav-avatar--initials">' + escHtml((user.first_name || user.nickname || '?')[0].toUpperCase()) + '</span>';
       li.innerHTML =
         (user.is_admin ? '<a href="/admin" class="btn-nav-admin" title="Адмінпанель">&#9881;</a>' : '') +
-        '<span class="nav-user-info">' + avatarHtml + display + '</span>' +
+        '<a href="/profile" class="nav-user-info">' + avatarHtml + '<span class="nav-user-name">' + display + '</span></a>' +
         '<button class="btn-nav-logout" id="btnNavLogout">Вийти</button>';
 
       // Mobile drawer user card — inserted right after drawer-head
@@ -1249,7 +1249,7 @@
       btn.addEventListener('click', function () { switchTab(this.getAttribute('data-tab')); });
     });
 
-    if (/[?&]tab=register/.test(window.location.search)) switchTab('register');
+    switchTab(/[?&]tab=register/.test(window.location.search) ? 'register' : 'login');
 
     var pwToggles = Array.prototype.slice.call(document.querySelectorAll('.btn-pw-toggle'));
     pwToggles.forEach(function (btn) {

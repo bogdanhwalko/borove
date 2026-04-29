@@ -45,7 +45,6 @@
     <li><a href="/rides">&#128664; Попутки</a></li>
     <li><a href="/gallery">&#128247; Галерея</a></li>
     <li><a href="/shop">&#128717; Базар</a></li>
-    <li id="navProfileLi" style="display:none"><a href="/profile">&#128100; Профіль</a></li>
     <li id="navAuthLi"><a href="/auth">&#128100; Увійти</a></li>
   </ul>
 </nav>
@@ -85,6 +84,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 @stack('modals')
-<script src="/js/main.js"></script>
+<script src="/js/main.js?v={{ filemtime(public_path('js/main.js')) }}"></script>
 </body>
 </html>

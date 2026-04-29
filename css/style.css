@@ -1618,6 +1618,10 @@ ul { list-style: none; }
   }
   .content-sidebar { width: 100%; -webkit-box-ordinal-group: 0; -ms-flex-order: -1; order: -1; }
   .widget { margin-bottom: 16px; }
+
+  /* Prevent nav from wrapping to a second line at tablet widths */
+  .site-nav ul { -ms-flex-wrap: nowrap; flex-wrap: nowrap; }
+  .site-nav ul li a { padding-left: 10px; padding-right: 10px; }
 }
 
 /* ── NAV OVERLAY ─────────────────────────────────────────── */
@@ -2497,6 +2501,10 @@ ul { list-style: none; }
   display: -webkit-inline-box;
   display: -ms-inline-flexbox;
   display: inline-flex;
+  -webkit-box-orient: horizontal;
+  -webkit-box-direction: normal;
+  -ms-flex-direction: row;
+  flex-direction: row;
   -webkit-box-align: center;
   -ms-flex-align: center;
   align-items: center;
@@ -2509,6 +2517,11 @@ ul { list-style: none; }
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 180px;
+}
+.nav-user-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .btn-nav-logout {
   background: rgba(255,255,255,.12);
@@ -3182,13 +3195,11 @@ ul { list-style: none; }
 
 /* Buy modal */
 .modal-overlay {
+  display: none;
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.45);
   z-index: 1000;
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
   -webkit-box-align: center;
   -ms-flex-align: center;
   align-items: center;
@@ -3196,6 +3207,11 @@ ul { list-style: none; }
   -ms-flex-pack: center;
   justify-content: center;
   padding: 16px;
+}
+.modal-overlay.is-open {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
 }
 .modal-box {
   background: #fff;
