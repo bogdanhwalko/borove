@@ -45,3 +45,4 @@ img/header-village.jpg
 *.log
 *.bak
 *.tmp
+.claude
