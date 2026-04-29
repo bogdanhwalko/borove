@@ -1,0 +1,125 @@
+@extends('layouts.app')
+
+@section('title', 'Увійти | Борове')
+@section('description', 'Вхід та реєстрація — Борове')
+
+@section('content')
+
+<main>
+  <div class="auth-wrap">
+    <div class="auth-card">
+
+      <div class="auth-card-header">
+        <div class="auth-logo">&#127807;</div>
+        <h2>Борове</h2>
+        <p>Особистий кабінет мешканця</p>
+      </div>
+
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" data-tab="login" role="tab" aria-selected="true">Увійти</button>
+        <button class="auth-tab" data-tab="register" role="tab" aria-selected="false">Реєстрація</button>
+      </div>
+
+      <form id="loginForm" class="auth-form" novalidate>
+        <div class="auth-error" role="alert"></div>
+
+        <div class="form-group">
+          <label for="loginPhone">Номер телефону <span class="req">*</span></label>
+          <div class="phone-input-wrap">
+            <span class="phone-prefix">+380</span>
+            <input type="tel" id="loginPhone" name="phone"
+                   placeholder="67 123-45-67"
+                   autocomplete="tel" inputmode="numeric" data-phone-mask>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="loginPassword">Пароль <span class="req">*</span></label>
+          <div class="pw-wrap">
+            <input type="password" id="loginPassword" name="password"
+                   placeholder="••••••"
+                   autocomplete="current-password">
+            <button type="button" class="btn-pw-toggle" aria-label="Показати пароль">&#128065;</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-auth-submit">Увійти</button>
+
+        <div class="auth-switch">
+          Ще не зареєстровані?
+          <button type="button" data-tab="register">Зареєструватись</button>
+        </div>
+      </form>
+
+      <form id="registerForm" class="auth-form" style="display:none" novalidate>
+        <div class="auth-error" role="alert"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="regLastName">Прізвище <span class="req">*</span></label>
+            <input type="text" id="regLastName" name="lastName" autocomplete="family-name">
+          </div>
+          <div class="form-group">
+            <label for="regFirstName">Ім'я <span class="req">*</span></label>
+            <input type="text" id="regFirstName" name="firstName" autocomplete="given-name">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="regPatronymic">По батькові <span class="req">*</span></label>
+          <input type="text" id="regPatronymic" name="patronymic" autocomplete="additional-name">
+        </div>
+
+        <div class="form-group">
+          <label for="regStreet">Вулиця <span class="req">*</span></label>
+          <input type="text" id="regStreet" name="street" placeholder="вул. Центральна" autocomplete="street-address">
+        </div>
+
+        <div class="form-group">
+          <label for="regNickname">Кличка <span class="req">*</span></label>
+          <input type="text" id="regNickname" name="nickname" placeholder="як вас знають у селі">
+        </div>
+
+        <div class="form-group">
+          <label for="regPhone">Номер телефону <span class="req">*</span></label>
+          <div class="phone-input-wrap">
+            <span class="phone-prefix">+380</span>
+            <input type="tel" id="regPhone" name="phone"
+                   placeholder="67 123-45-67"
+                   autocomplete="tel" inputmode="numeric" data-phone-mask>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="regPassword">Пароль <span class="req">*</span></label>
+          <div class="pw-wrap">
+            <input type="password" id="regPassword" name="password"
+                   placeholder="мінімум 8 символів"
+                   autocomplete="new-password">
+            <button type="button" class="btn-pw-toggle" aria-label="Показати пароль">&#128065;</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="regPasswordConfirm">Підтвердження пароля <span class="req">*</span></label>
+          <div class="pw-wrap">
+            <input type="password" id="regPasswordConfirm" name="passwordConfirm"
+                   placeholder="повторіть пароль"
+                   autocomplete="new-password">
+            <button type="button" class="btn-pw-toggle" aria-label="Показати пароль">&#128065;</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-auth-submit">Зареєструватись</button>
+
+        <div class="auth-switch">
+          Вже маєте акаунт?
+          <button type="button" data-tab="login">Увійти</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</main>
+
+@endsection

@@ -633,8 +633,7 @@
     var container = $('#articleContent');
     if (!container) return;
 
-    var params = new URLSearchParams(window.location.search);
-    var slug = params.get('slug');
+    var slug = window.location.pathname.split('/').filter(Boolean).pop();
     if (!slug) { container.innerHTML = '<p>Статтю не знайдено.</p>'; return; }
 
     apiFetch('GET', '/articles/' + slug)
@@ -677,8 +676,7 @@
     var container = $('#albumContent');
     if (!container) return;
 
-    var params = new URLSearchParams(window.location.search);
-    var slug = params.get('slug');
+    var slug = window.location.pathname.split('/').filter(Boolean).pop();
     if (!slug) { container.innerHTML = '<p>Альбом не знайдено.</p>'; return; }
 
     apiFetch('GET', '/albums/' + slug)
@@ -736,14 +734,14 @@
     var submitForm   = document.getElementById('gallerySubmitForm');
     var user = getCachedUser();
 
-    if (submitWrap && user) {
-      submitWrap.style.display = '';
+    if (submitToggle && user) {
+      submitToggle.style.display = '';
 
       submitToggle.addEventListener('click', function () {
-        var open = submitForm.style.display === 'none';
-        submitForm.style.display = open ? '' : 'none';
-        submitToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        submitToggle.textContent = open ? '&#x2715; Закрити' : '+ Додати фотоальбом';
+        var willOpen = (submitWrap.style.display === 'none');
+        submitWrap.style.display = willOpen ? '' : 'none';
+        submitToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        submitToggle.innerHTML = willOpen ? '&#x2715; Закрити' : '&#43; Додати фотоальбом';
       });
 
       // Photo preview
@@ -831,9 +829,9 @@
               photosLabel.classList.remove('has-file');
               previewBox.style.display = 'none';
               previewBox.innerHTML = '';
-              submitForm.style.display = 'none';
+              submitWrap.style.display = 'none';
               submitToggle.setAttribute('aria-expanded', 'false');
-              submitToggle.textContent = '+ Додати фотоальбом';
+              submitToggle.innerHTML = '&#43; Додати фотоальбом';
               showToast('✓ Альбом відправлено на модерацію!');
             })
             .catch(function (err) {
@@ -861,7 +859,7 @@
         return;
       }
       grid.innerHTML = loadedAlbums.map(function (a) {
-        return '<a href="/album?slug=' + a.slug + '" class="album-cover fade-in">' +
+        return '<a href="/gallery/' + a.slug + '" class="album-cover fade-in">' +
           '<img src="' + albumCoverUrl(a, 800, 600) + '" alt="' + escHtml(a.title) + '" loading="lazy">' +
           '<div class="album-cover-overlay">' +
             '<div class="album-cover-title">' + escHtml(a.title) + '</div>' +
@@ -932,7 +930,7 @@
               '<span>&#128065; ' + (a.views || 0) + ' переглядів</span>' +
             '</div>' +
             '<p>' + escHtml(a.summary) + '</p>' +
-            '<a href="/article?slug=' + escHtml(a.slug) + '" class="btn-read">Читати далі &#8594;</a>' +
+            '<a href="/articles/' + escHtml(a.slug) + '" class="btn-read">Читати далі &#8594;</a>' +
           '</div>' +
         '</article>';
     }
@@ -954,7 +952,7 @@
             '<p>' + escHtml(a.summary) + '</p>' +
             '<div class="card-footer">' +
               '<span class="card-date">&#128197; ' + fmtIsoDate(a.published_at ? a.published_at.substring(0, 10) : '') + '</span>' +
-              '<a href="/article?slug=' + escHtml(a.slug) + '" class="btn-read">Читати &#8594;</a>' +
+              '<a href="/articles/' + escHtml(a.slug) + '" class="btn-read">Читати &#8594;</a>' +
             '</div>' +
           '</div>' +
         '</article>';
@@ -988,7 +986,7 @@
       .then(function (resp) {
         var recent = resp.data || [];
         grid.innerHTML = recent.map(function (a) {
-          return '<a href="/album?slug=' + a.slug + '" class="album-cover fade-in">' +
+          return '<a href="/gallery/' + a.slug + '" class="album-cover fade-in">' +
             '<img src="' + albumCoverUrl(a, 800, 600) + '" alt="' + escHtml(a.title) + '" loading="lazy">' +
             '<div class="album-cover-overlay">' +
               '<div class="album-cover-title">' + escHtml(a.title) + '</div>' +
@@ -1389,7 +1387,7 @@
     if (!name) return '';
     var sid = p.shop_id || (p.shop && p.shop.id);
     return sid
-      ? '<a href="shop.html?shop=' + sid + '" class="product-seller-link">' + escHtml(name) + '</a>'
+      ? '<a href="/shop?shop=' + sid + '" class="product-seller-link">' + escHtml(name) + '</a>'
       : escHtml(name);
   }
 
@@ -1905,7 +1903,7 @@
               ? '<span style="font-weight:700;color:var(--p)">' + Number(p.price).toLocaleString('uk-UA') + ' грн</span>'
               : '<span style="color:var(--muted);font-size:.78rem">за домовленістю</span>';
             var sid = p.shop_id || (p.shop && p.shop.id);
-            var shopUrl = sid ? 'shop.html?shop=' + sid : 'shop.html';
+            var shopUrl = sid ? '/shop?shop=' + sid : '/shop';
             var imgHtml = p.photo_path
               ? '<img class="product-card-img product-card-img--clickable" src="' + photoSrc(p.photo_path) + '" alt="' + escHtml(p.title) + '" loading="lazy" data-src="' + photoSrc(p.photo_path) + '" data-alt="' + escHtml(p.title) + '">'
               : '<div class="product-card-img-placeholder">&#128717;</div>';
@@ -1939,7 +1937,7 @@
     withReqs.sort(function (a, b) { return b.purchase_requests_count - a.purchase_requests_count; });
     var p   = withReqs[0];
     var sid = p.shop_id || (p.shop && p.shop.id);
-    var shopUrl = sid ? 'shop.html?shop=' + sid : 'shop.html';
+    var shopUrl = sid ? '/shop?shop=' + sid : '/shop';
 
     var count   = p.purchase_requests_count;
     var imgSrc  = p.photo_path ? photoSrc(p.photo_path) : null;
@@ -2497,12 +2495,17 @@ function resetAlbums() {
     var user  = getCachedUser();
 
     if (!token || !user) {
-      gate.style.display = '';
+      window.location.replace('/auth');
       return;
     }
 
     gate.style.display  = 'none';
     panel.style.display = '';
+
+    /* ensure only the first tab section is visible on load */
+    $$('.profile-tab-section').forEach(function (s) { s.style.display = 'none'; });
+    var firstTab = document.getElementById('ptabInfo');
+    if (firstTab) firstTab.style.display = '';
 
     /* ── tab switching ── */
     $$('[data-ptab]').forEach(function (btn) {

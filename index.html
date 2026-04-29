@@ -1,13 +1,13 @@
 ﻿<!DOCTYPE html>
 <html lang="uk">
 <head>
-  <!--#include virtual="/partials/head.html" -->
+  <?php include $_SERVER['DOCUMENT_ROOT'].'/partials/head.html'; ?>
   <meta name="description" content="Офіційний сайт села Борове — новини, оголошення, попутки">
   <title>Борове — Сільська газета</title>
 </head>
 <body>
 
-<!--#include virtual="/partials/header.html" -->
+<?php include $_SERVER['DOCUMENT_ROOT'].'/partials/header.html'; ?>
 
 <!-- TICKER -->
 <div class="news-ticker" aria-hidden="true">
@@ -149,8 +149,8 @@
   </div>
 </main>
 
-<!--#include virtual="/partials/footer.html" -->
+<?php include $_SERVER['DOCUMENT_ROOT'].'/partials/footer.html'; ?>
 
-<!--#include virtual="/partials/foot.html" -->
+<?php include $_SERVER['DOCUMENT_ROOT'].'/partials/foot.html'; ?>
 </body>
 </html>

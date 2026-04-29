@@ -1,13 +1,13 @@
 ﻿<!DOCTYPE html>
 <html lang="uk">
 <head>
-  <!--#include virtual="/partials/head.html" -->
+  <?php include $_SERVER['DOCUMENT_ROOT'].'/partials/head.html'; ?>
   <meta name="description" content="Запити на покупку — мій магазин">
   <title>Запити на покупку — Борове</title>
 </head>
 <body>
 
-<!--#include virtual="/partials/header.html" -->
+<?php include $_SERVER['DOCUMENT_ROOT'].'/partials/header.html'; ?>
 
 <div class="page-hero">
   <h1>&#128276; Запити на покупку</h1>
@@ -30,7 +30,7 @@
   </div>
 </main>
 
-<!--#include virtual="/partials/footer.html" -->
+<?php include $_SERVER['DOCUMENT_ROOT'].'/partials/footer.html'; ?>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script src="js/main.js"></script>

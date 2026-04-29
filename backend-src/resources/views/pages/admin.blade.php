@@ -1,0 +1,162 @@
+@extends('layouts.app')
+
+@section('title', 'Адмін — Борове')
+@section('description', 'Адміністрування сайту Борове')
+
+@section('content')
+
+<div class="page-hero">
+  <h1>&#9881;&#65039; Адміністрування</h1>
+  <p>Управління контентом сайту</p>
+</div>
+
+<main>
+  <div class="container">
+
+    <div id="adminGate">
+      <div class="empty-state"><div class="empty-icon">&#128274;</div><p>Перевірка доступу...</p></div>
+    </div>
+
+    <div id="adminPanel" style="display:none">
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="articles">&#128221; Статті</button>
+        <button class="admin-tab" data-tab="gallery">&#128247; Галерея</button>
+        <button class="admin-tab" data-tab="moderation" id="tabModerationBtn">
+          &#128276; Модерація <span id="pendingBadge" class="pending-badge"></span>
+        </button>
+      </div>
+
+      <div class="admin-section" id="tabArticles">
+        <div class="admin-layout">
+
+          <div class="admin-list-wrap">
+            <div class="admin-list-header">
+              <h3>Статті</h3>
+              <button class="btn-admin-new" id="btnNewArticle">&#43; Нова стаття</button>
+            </div>
+            <div id="adminArticleList"><p class="admin-loading">Завантаження...</p></div>
+            <div id="adminArticlePagination"></div>
+          </div>
+
+          <div class="admin-form-wrap">
+            <div class="add-form" id="articleFormCard">
+              <h3 id="articleFormTitle">&#128221; Нова стаття</h3>
+              <form id="articleForm" novalidate>
+                <input type="hidden" id="articleId">
+                <div class="form-group">
+                  <label for="artTitle">Заголовок *</label>
+                  <input type="text" id="artTitle" placeholder="Назва статті" required maxlength="255">
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="artCategory">Категорія *</label>
+                    <input type="text" id="artCategory" placeholder="Новини" required maxlength="100">
+                  </div>
+                  <div class="form-group">
+                    <label for="artAuthor">Автор *</label>
+                    <input type="text" id="artAuthor" placeholder="Ім'я автора" required maxlength="100">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="artDate">Дата публікації</label>
+                    <input type="date" id="artDate">
+                  </div>
+                  <div class="form-group">
+                    <label for="artImageSeed">Зображення (picsum seed)</label>
+                    <input type="text" id="artImageSeed" placeholder="village-autumn" maxlength="100">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="artSummary">Короткий опис *</label>
+                  <textarea id="artSummary" placeholder="Анотація статті (до 500 символів)..." required maxlength="500" style="min-height:70px"></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="artBody">Текст статті *</label>
+                  <textarea id="artBody" placeholder="Повний текст статті (підтримується HTML)..." required style="min-height:220px"></textarea>
+                </div>
+                <div class="admin-form-actions">
+                  <button type="submit" class="btn-submit">&#128190; Зберегти</button>
+                  <button type="button" class="btn-cancel" id="btnCancelArticle">Скасувати</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="admin-section" id="tabModeration" style="display:none">
+        <div id="adminPendingList"><p class="admin-loading">Завантаження...</p></div>
+      </div>
+
+      <div class="admin-section" id="tabGallery" style="display:none">
+        <div class="admin-layout">
+
+          <div class="admin-list-wrap">
+            <div class="admin-list-header">
+              <h3>Опубліковані альбоми</h3>
+              <button class="btn-admin-new" id="btnShowAlbumForm">&#43; Новий альбом</button>
+            </div>
+            <div id="adminAlbumList"><p class="admin-loading">Завантаження...</p></div>
+            <div id="adminAlbumPagination"></div>
+          </div>
+
+          <div class="admin-form-wrap">
+
+            <div class="add-form" id="albumFormCard" style="display:none">
+              <h3>&#128194; Новий альбом</h3>
+              <form id="albumForm" novalidate>
+                <div class="form-group">
+                  <label for="albumTitle">Назва *</label>
+                  <input type="text" id="albumTitle" placeholder="Назва альбому" required maxlength="200">
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="albumDate">Дата</label>
+                    <input type="date" id="albumDate">
+                  </div>
+                  <div class="form-group">
+                    <label for="albumCoverSeed">Обкладинка (picsum seed)</label>
+                    <input type="text" id="albumCoverSeed" placeholder="village" maxlength="100">
+                  </div>
+                </div>
+                <div class="admin-form-actions">
+                  <button type="submit" class="btn-submit">&#128194; Створити</button>
+                  <button type="button" class="btn-cancel" id="btnCancelAlbum">Скасувати</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="add-form" id="photoManagerCard" style="display:none">
+              <h3 id="photoManagerTitle">&#128247; Фото альбому</h3>
+              <div id="adminPhotoGrid" class="admin-photo-grid"></div>
+              <form id="photoUploadForm" style="margin-top:20px">
+                <input type="hidden" id="uploadAlbumId">
+                <div class="form-group">
+                  <label for="photoFile">&#128247; Вибрати фото *</label>
+                  <input type="file" id="photoFile" accept="image/*" required>
+                </div>
+                <div class="form-group">
+                  <label for="photoCaption">Підпис до фото</label>
+                  <input type="text" id="photoCaption" placeholder="Короткий опис..." maxlength="200">
+                </div>
+                <button type="submit" class="btn-submit">&#128228; Завантажити</button>
+              </form>
+            </div>
+
+            <div id="galleryPlaceholder" class="admin-placeholder">
+              <div class="empty-icon">&#128247;</div>
+              <p>Виберіть альбом зі списку, щоб керувати фото</p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+@endsection

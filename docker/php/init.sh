@@ -50,6 +50,16 @@ if [ ! -f ".bootstrap-complete" ]; then
     cp -f /backend-src/bootstrap/app.php bootstrap/app.php
 
     cp -f /backend-src/routes/api.php routes/api.php
+    cp -f /backend-src/routes/web.php routes/web.php
+
+    mkdir -p resources/views/layouts resources/views/pages
+    cp -rf /backend-src/resources/views/. resources/views/
+
+    mkdir -p public/css public/js public/img public/images
+    cp -rf /backend-src/public/css/.  public/css/  2>/dev/null || true
+    cp -rf /backend-src/public/js/.   public/js/   2>/dev/null || true
+    cp -rf /backend-src/public/img    public/      2>/dev/null || true
+    cp -rf /backend-src/public/images public/      2>/dev/null || true
 
     cp -f /backend-src/app/Models/User.php         app/Models/User.php
     cp -f /backend-src/app/Models/Article.php      app/Models/Article.php
