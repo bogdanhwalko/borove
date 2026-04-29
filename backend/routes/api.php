@@ -23,11 +23,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me',      [AuthController::class, 'me']);
 
     // Profile
-    Route::get('/profile',                 [ProfileController::class, 'show']);
-    Route::patch('/profile',               [ProfileController::class, 'update']);
-    Route::post('/profile/avatar',         [ProfileController::class, 'uploadAvatar']);
-    Route::post('/profile/password',       [ProfileController::class, 'changePassword']);
-    Route::get('/profile/logs',            [ProfileController::class, 'logs']);
+    Route::get('/profile',                                      [ProfileController::class, 'show']);
+    Route::patch('/profile',                                    [ProfileController::class, 'update']);
+    Route::middleware('throttle:5,1')->post('/profile/avatar',  [ProfileController::class, 'uploadAvatar']);
+    Route::post('/profile/password',                            [ProfileController::class, 'changePassword']);
+    Route::get('/profile/logs',                                 [ProfileController::class, 'logs']);
 });
 
 // Articles (public)

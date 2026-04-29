@@ -63,7 +63,7 @@ class ProfileController extends Controller
         $user = $request->user();
 
         $request->validate([
-            'avatar' => 'required|image|max:5120',
+            'avatar' => 'required|image|mimes:jpeg,jpg,png,gif,webp|max:5120',
         ]);
 
         if ($user->avatar_path) {

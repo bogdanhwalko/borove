@@ -1321,8 +1321,8 @@
           showErr(registerForm, 'Введіть повний номер: +380 XX XXX-XX-XX');
           return;
         }
-        if (els.password.value.length < 6) {
-          showErr(registerForm, 'Пароль — мінімум 6 символів');
+        if (els.password.value.length < 8) {
+          showErr(registerForm, 'Пароль — мінімум 8 символів');
           return;
         }
         if (els.password.value !== els.passwordConfirm.value) {

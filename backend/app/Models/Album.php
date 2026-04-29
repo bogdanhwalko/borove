@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Album extends Model
 {
-    protected $fillable = ['slug', 'title', 'cover_seed', 'cover_path', 'album_date', 'status', 'user_id', 'description'];
+    protected $fillable = ['slug', 'title', 'cover_seed', 'cover_path', 'album_date', 'description'];
 
     protected $casts = ['album_date' => 'date'];
 
