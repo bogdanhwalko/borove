@@ -2279,14 +2279,21 @@
           var id = parseInt(btn.dataset.id, 10);
           btn.disabled = true;
           apiFetch('POST', '/my/shop/requests/' + id + '/view', {}, token)
-            .then(function (res) { if (!res.ok) throw new Error(); return res.json(); })
+            .then(function (res) {
+              if (!res.ok) return res.json().then(function (d) {
+                throw new Error(d.message || 'Помилка');
+              }).catch(function (err) {
+                throw new Error(err.message || 'Помилка');
+              });
+              return res.json();
+            })
             .then(function () {
               var r = requests.find(function (x) { return x.id === id; });
               if (r) r.viewed_at = new Date().toISOString();
               renderList();
               showToast('✓ Позначено як переглянуто');
             })
-            .catch(function () { showToast('Помилка'); btn.disabled = false; });
+            .catch(function (err) { showToast(err.message || 'Помилка'); btn.disabled = false; });
         });
       });
       var btnAll = document.getElementById('btnMarkAllViewed');
@@ -2295,13 +2302,20 @@
         btnAll.addEventListener('click', function () {
           btnAll.disabled = true;
           apiFetch('POST', '/my/shop/requests/view-all', {}, token)
-            .then(function (res) { if (!res.ok) throw new Error(); return res.json(); })
+            .then(function (res) {
+              if (!res.ok) return res.json().then(function (d) {
+                throw new Error(d.message || 'Помилка');
+              }).catch(function (err) {
+                throw new Error(err.message || 'Помилка');
+              });
+              return res.json();
+            })
             .then(function () {
               requests.forEach(function (r) { if (!r.viewed_at) r.viewed_at = new Date().toISOString(); });
               renderList();
               showToast('✓ Усі позначено як переглянуті');
             })
-            .catch(function () { showToast('Помилка'); btnAll.disabled = false; });
+            .catch(function (err) { showToast(err.message || 'Помилка'); btnAll.disabled = false; });
         });
       }
     }

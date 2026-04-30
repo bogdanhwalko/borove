@@ -115,11 +115,17 @@ class UserShopController extends Controller
     public function markRequestViewed(Request $request, int $id): JsonResponse
     {
         $shop = $request->user()->shop;
-        if (!$shop) abort(403);
+        if (!$shop) {
+            return response()->json(['message' => 'Спершу створіть магазин, щоб переглядати заявки.'], 403);
+        }
 
         $req = PurchaseRequest::with('product:id,shop_id')->findOrFail($id);
-        if (!$req->product || $req->product->shop_id !== $shop->id) {
-            abort(403);
+        if (!$req->product) {
+            return response()->json(['message' => 'Товар для цієї заявки не знайдено.'], 404);
+        }
+
+        if ((int) $req->product->shop_id !== (int) $shop->id) {
+            return response()->json(['message' => 'Можна переглядати лише заявки свого магазину.'], 403);
         }
 
         if (!$req->viewed_at) {
