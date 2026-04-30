@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('albums', function (Blueprint $table) {
             $table->id();
-            $table->string('slug')->unique();
+            $table->string('slug', 191)->unique();
             $table->string('title');
             $table->string('cover_seed');
             $table->date('album_date');

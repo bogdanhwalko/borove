@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('articles', function (Blueprint $table) {
             $table->id();
-            $table->string('slug')->unique();
+            $table->string('slug', 191)->unique();
             $table->string('category');
             $table->string('title');
             $table->text('summary');

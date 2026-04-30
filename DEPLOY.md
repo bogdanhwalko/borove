@@ -146,8 +146,9 @@ DB_PORT=3306
 DB_DATABASE=loginuser_borove
 DB_USERNAME=loginuser_borove
 DB_PASSWORD=ваш_пароль
+DB_ENGINE=InnoDB
 
-CACHE_DRIVER=file
+CACHE_STORE=file
 SESSION_DRIVER=file
 QUEUE_CONNECTION=sync
 
