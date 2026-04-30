@@ -311,6 +311,36 @@
     '</div>';
   }
 
+  function initAnnouncementTicker() {
+    var ticker = document.getElementById('announcementTicker');
+    if (!ticker) return;
+
+    apiFetch('GET', '/announcements?per_page=10')
+      .then(function (res) {
+        if (!res.ok) throw new Error('http');
+        return res.json();
+      })
+      .then(function (resp) {
+        var items = resp.data || [];
+        var label = '<span class="ticker-label">Оголошення</span>';
+
+        if (!items.length) {
+          ticker.innerHTML = label + 'Немає опублікованих оголошень';
+          return;
+        }
+
+        ticker.innerHTML = label + items.map(function (ann) {
+          return '<span class="ticker-item">' +
+            '<span class="ticker-type">' + escHtml(typeLabel(ann.type)) + '</span> ' +
+            escHtml(ann.title) +
+          '</span>';
+        }).join('<span class="ticker-sep">&nbsp;&#9679;&nbsp;</span>');
+      })
+      .catch(function () {
+        ticker.innerHTML = '<span class="ticker-label">Оголошення</span>Не вдалося завантажити оголошення';
+      });
+  }
+
   function initAnnouncementsPage() {
     var list = $('#annList');
     if (!list) return;
@@ -3615,6 +3645,7 @@ function resetAlbums() {
     initUserArea();
     initActiveLink();
     initHeaderDate();
+    initAnnouncementTicker();
     initSidebarWidgets();
     initFeedbackForm();
     initAnnouncementsPage();

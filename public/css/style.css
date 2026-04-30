@@ -349,6 +349,16 @@ ul { list-style: none; }
   vertical-align: middle;
 }
 
+.ticker-item { display: inline-block; }
+.ticker-type {
+  color: var(--p);
+  font-weight: 800;
+}
+.ticker-sep {
+  color: rgba(90,62,0,.55);
+  margin: 0 8px;
+}
+
 /* ── LAYOUT ──────────────────────────────────────────────── */
 .container {
   max-width: 1240px;

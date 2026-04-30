@@ -5,14 +5,10 @@
 
 @section('content')
 
-<div class="news-ticker" aria-hidden="true">
-  <span class="ticker-inner">
-    <span class="ticker-label">Новини</span>
-    День села — 1 травня, о 14:00 &nbsp;&#9679;&nbsp;
-    Планове відключення світла: 27 квітня 09:00–15:00 &nbsp;&#9679;&nbsp;
-    Прийом лікаря: щочетверга 10:00–14:00 &nbsp;&#9679;&nbsp;
-    Збори мешканців щодо ремонту дороги: 28 квітня о 18:00 &nbsp;&#9679;&nbsp;
-    Новий графік вивезення сміття — з 1 травня &nbsp;&#9679;&nbsp;
+<div class="news-ticker" aria-label="Останні оголошення">
+  <span class="ticker-inner" id="announcementTicker">
+    <span class="ticker-label">Оголошення</span>
+    Завантаження останніх оголошень...
   </span>
 </div>
 
