@@ -1931,7 +1931,14 @@
           var id = parseInt(btn.dataset.id, 10);
           btn.disabled = true;
           apiFetch('DELETE', '/my/shop/products/' + id, null, token)
-            .then(function (res) { if (!res.ok) throw new Error(); })
+            .then(function (res) {
+              if (!res.ok) return res.json().then(function (d) {
+                throw new Error(d.message || 'Помилка видалення');
+              }).catch(function (err) {
+                throw new Error(err.message || 'Помилка видалення');
+              });
+              return res.json();
+            })
             .then(function () {
               loadedProds = loadedProds.filter(function (p) { return p.id !== id; });
               prodTotal = Math.max(0, prodTotal - 1);
@@ -1939,7 +1946,7 @@
               loadMySidebar();
               showToast('✓ Товар видалено');
             })
-            .catch(function () { showToast('Помилка видалення'); btn.disabled = false; });
+            .catch(function (err) { showToast(err.message || 'Помилка видалення'); btn.disabled = false; });
         });
       });
 

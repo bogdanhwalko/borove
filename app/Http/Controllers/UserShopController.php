@@ -7,6 +7,7 @@ use App\Models\PurchaseRequest;
 use App\Models\Shop;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class UserShopController extends Controller
@@ -69,19 +70,29 @@ class UserShopController extends Controller
 
     public function destroyProduct(Request $request, int $id): JsonResponse
     {
-        $product = Product::findOrFail($id);
+        $product = Product::with('shop:id,user_id')->findOrFail($id);
+        $user = $request->user();
 
-        if ($product->shop->user_id !== $request->user()->id && !$request->user()->is_admin) {
-            abort(403);
+        if (!$product->shop) {
+            return response()->json(['message' => 'Магазин товару не знайдено.'], 404);
         }
 
-        if ($product->photo_path) {
-            Storage::disk('public')->delete($product->photo_path);
+        if ((int) $product->shop->user_id !== (int) $user->id && !$user->is_admin) {
+            return response()->json(['message' => 'Можна видаляти лише товари зі свого магазину.'], 403);
         }
 
-        $product->delete();
+        $photoPath = $product->photo_path;
 
-        return response()->json(['ok' => true]);
+        DB::transaction(function () use ($product): void {
+            $product->purchaseRequests()->delete();
+            $product->delete();
+        });
+
+        if ($photoPath) {
+            Storage::disk('public')->delete($photoPath);
+        }
+
+        return response()->json(['ok' => true, 'message' => 'Товар видалено.']);
     }
 
     public function requests(Request $request): JsonResponse
