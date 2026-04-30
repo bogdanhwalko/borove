@@ -1752,9 +1752,10 @@
 
   function renderProductCard(p, myShopId, sentIds) {
     var cachedUser = getCachedUser() || {};
-    var sellerUserId = p.shop && (p.shop.user_id || (p.shop.user && p.shop.user.id));
-    var isOwn = (myShopId && p.shop_id === myShopId)
-              || (cachedUser.id && sellerUserId && cachedUser.id === sellerUserId);
+    var sellerUserId = p.shop && (p.shop.user_id != null ? p.shop.user_id : (p.shop.user && p.shop.user.id));
+    var myId = cachedUser.id;
+    var isOwn = (myShopId != null && p.shop_id != null && Number(myShopId) === Number(p.shop_id))
+              || (myId != null && sellerUserId != null && Number(myId) === Number(sellerUserId));
     var isSent = sentIds && sentIds.indexOf(p.id) !== -1;
     var actionsHtml = '';
     if (isOwn) {
@@ -1908,7 +1909,15 @@
       listEl.querySelectorAll('.btn-buy:not(:disabled)').forEach(function (btn) {
         btn.addEventListener('click', function () {
           if (!token) { showToast('Увійдіть, щоб надіслати запит'); return; }
-          pendingBuyProduct = { id: parseInt(btn.dataset.id, 10), title: btn.dataset.title };
+          var id = parseInt(btn.dataset.id, 10);
+          var prod = loadedProds.find(function (x) { return x.id === id; });
+          var cu = getCachedUser() || {};
+          var sellerId = prod && prod.shop && (prod.shop.user_id != null ? prod.shop.user_id : (prod.shop.user && prod.shop.user.id));
+          if (cu.id != null && sellerId != null && Number(cu.id) === Number(sellerId)) {
+            showToast('Це ваш власний товар');
+            return;
+          }
+          pendingBuyProduct = { id: id, title: btn.dataset.title };
           if (modalTitle) modalTitle.textContent = btn.dataset.title;
           if (modalMsg)   modalMsg.value = '';
           if (modal)      modal.style.display = 'flex';
