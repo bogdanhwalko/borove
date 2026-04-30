@@ -87,30 +87,30 @@
         </div>
 
         <div class="widget fade-in">
-          <div class="widget-header">&#128222; Корисні контакти</div>
+          <div class="widget-header">&#9993; Зворотний зв'язок з адміном</div>
           <div class="widget-body">
-            <ul class="contact-list">
-              <li>
-                <div class="c-icon">&#127968;</div>
-                <div><div class="c-label">Сільська рада</div><div class="c-val">(067) 123-45-67</div></div>
-              </li>
-              <li>
-                <div class="c-icon">&#128657;</div>
-                <div><div class="c-label">Швидка допомога</div><div class="c-val">103</div></div>
-              </li>
-              <li>
-                <div class="c-icon">&#128293;</div>
-                <div><div class="c-label">Пожежна охорона</div><div class="c-val">101</div></div>
-              </li>
-              <li>
-                <div class="c-icon">&#128268;</div>
-                <div><div class="c-label">Аварія ел. мережі</div><div class="c-val">0800-500-800</div></div>
-              </li>
-              <li>
-                <div class="c-icon">&#128268;</div>
-                <div><div class="c-label">Аварія газу</div><div class="c-val">0800-501-112</div></div>
-              </li>
-            </ul>
+            <div id="feedbackAuthNotice" class="form-auth-notice feedback-auth-notice">
+              <div class="form-auth-icon">&#128274;</div>
+              <p>Щоб написати адміну, потрібно <a href="/auth">увійти</a></p>
+            </div>
+            <form id="feedbackForm" class="feedback-form" style="display:none" novalidate>
+              <div class="feedback-profile">
+                <div class="feedback-profile-row">
+                  <span>Відправник</span>
+                  <strong id="feedbackProfileName"></strong>
+                </div>
+                <div class="feedback-profile-row">
+                  <span>Контакт</span>
+                  <strong id="feedbackProfileContact"></strong>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="feedbackMessage">Повідомлення *</label>
+                <textarea id="feedbackMessage" name="message" maxlength="2000" required placeholder="Напишіть питання або пропозицію..."></textarea>
+              </div>
+              <button type="submit" class="btn-submit">Надіслати</button>
+              <p id="feedbackStatus" class="feedback-status" role="status" aria-live="polite"></p>
+            </form>
           </div>
         </div>
 

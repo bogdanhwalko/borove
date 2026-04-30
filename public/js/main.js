@@ -206,6 +206,81 @@
     });
   }
 
+  function initFeedbackForm() {
+    var form = document.getElementById('feedbackForm');
+    if (!form) return;
+
+    var notice = document.getElementById('feedbackAuthNotice');
+    var token = getToken();
+    var user = getCachedUser();
+    var profileName = document.getElementById('feedbackProfileName');
+    var profileContact = document.getElementById('feedbackProfileContact');
+
+    if (!token || !user) {
+      form.style.display = 'none';
+      if (notice) notice.style.display = '';
+      return;
+    }
+
+    var fullName = [user.last_name, user.first_name, user.patronymic].filter(Boolean).join(' ') || user.nickname || 'Користувач';
+    if (profileName) profileName.textContent = fullName;
+    if (profileContact) profileContact.textContent = user.phone ? formatUaPhone(user.phone) : 'Телефон не вказано';
+    if (notice) notice.style.display = 'none';
+    form.style.display = '';
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var message = document.getElementById('feedbackMessage').value.trim();
+      var status = document.getElementById('feedbackStatus');
+      var btn = form.querySelector('button[type="submit"]');
+
+      function setStatus(text, type) {
+        if (!status) return;
+        status.textContent = text;
+        status.classList.remove('is-success', 'is-error');
+        if (type) status.classList.add(type);
+      }
+
+      if (message.length < 10) {
+        setStatus('Повідомлення має бути не коротше 10 символів.', 'is-error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn._origText = btn._origText || btn.textContent;
+      btn.textContent = 'Надсилання...';
+      setStatus('', '');
+
+      apiFetch('POST', '/feedback', {
+        message: message,
+      }, token)
+        .then(function (res) {
+          if (res.status === 401) {
+            clearSession();
+            form.style.display = 'none';
+            if (notice) notice.style.display = '';
+            throw new Error('Сесія завершилась. Увійдіть ще раз.');
+          }
+          if (!res.ok) return res.json().then(function (d) {
+            throw new Error(d.errors ? Object.values(d.errors).flat()[0] : (d.message || 'Не вдалося надіслати'));
+          });
+          return res.json();
+        })
+        .then(function () {
+          form.reset();
+          setStatus('Повідомлення надіслано. Адмін перегляне його найближчим часом.', 'is-success');
+        })
+        .catch(function (err) {
+          setStatus(err.message || 'Помилка надсилання. Спробуйте ще раз.', 'is-error');
+        })
+        .finally(function () {
+          btn.disabled = false;
+          btn.textContent = btn._origText || 'Надіслати';
+        });
+    });
+  }
+
   /* ── ANNOUNCEMENTS ──────────────────────────── */
   function typeLabel(type) {
     var map = { urgent: 'Терміново', info: 'Інформація', event: 'Подія', services: 'Послуги' };
@@ -2352,6 +2427,7 @@
         if (name === 'gallery') loadAlbums();
         if (name === 'moderation') loadPendingAlbums();
         if (name === 'profiles') loadProfileRequests();
+        if (name === 'feedback') loadFeedbackMessages();
       });
     });
 
@@ -2893,6 +2969,127 @@
         });
     }
 
+    /* ── Feedback messages ─────────────────────── */
+    var feedbackMessages = [];
+    var feedbackPage = 0;
+    var feedbackTotal = 0;
+    var FEEDBACK_PER_PAGE = 20;
+
+    function feedbackCardHtml(msg) {
+      var date = msg.created_at ? fmtIsoDate(String(msg.created_at).substring(0, 10)) : '';
+      var user = msg.user
+        ? '<span>&#128100; ' + escHtml(msg.user.nickname || msg.user.first_name || ('ID ' + msg.user.id)) + '</span>'
+        : '<span>&#128100; Гість</span>';
+      var text = escHtml(msg.message || '').replace(/\n/g, '<br>');
+
+      return '<div class="feedback-card pending-card" data-id="' + msg.id + '">' +
+        '<div class="pending-card-header">' +
+          '<div class="pending-card-info">' +
+            '<div class="pending-card-title">' + escHtml(msg.name) + '</div>' +
+            '<div class="pending-card-meta">' +
+              user + ' &nbsp;&middot;&nbsp; &#9993; ' + escHtml(msg.contact) +
+              (date ? ' &nbsp;&middot;&nbsp; &#128197; ' + date : '') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<p class="pending-card-desc feedback-card-message">' + text + '</p>' +
+        '<div class="pending-card-actions">' +
+          '<button class="btn-publish" data-action="close" data-id="' + msg.id + '">&#10003; Опрацьовано</button>' +
+          '<button class="btn-reject" data-action="delete" data-id="' + msg.id + '">&#128465; Видалити</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function bindFeedbackActions(scope) {
+      scope.querySelectorAll('.feedback-card button[data-action]').forEach(function (btn) {
+        if (btn.dataset.bound) return;
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', function () {
+          var id = parseInt(btn.dataset.id, 10);
+          var action = btn.dataset.action;
+          if (action === 'delete' && !confirm('Видалити звернення?')) return;
+          btn.disabled = true;
+
+          var method = action === 'delete' ? 'DELETE' : 'POST';
+          var path = action === 'delete'
+            ? '/admin/feedback/' + id
+            : '/admin/feedback/' + id + '/close';
+
+          apiFetch(method, path, action === 'delete' ? null : {}, token)
+            .then(function (res) { if (!res.ok) throw new Error(); })
+            .then(function () {
+              showToast(action === 'delete' ? 'Звернення видалено' : '✓ Звернення опрацьовано');
+              loadFeedbackMessages();
+            })
+            .catch(function () {
+              showToast('Помилка');
+              btn.disabled = false;
+            });
+        });
+      });
+    }
+
+    function renderFeedbackPagination() {
+      var pag = document.getElementById('adminFeedbackPagination');
+      if (!pag) return;
+      var remaining = feedbackTotal - feedbackMessages.length;
+      if (remaining > 0) {
+        pag.innerHTML = '<button class="btn-show-more">+ Показати ще ' + Math.min(remaining, FEEDBACK_PER_PAGE) + '</button>';
+        pag.querySelector('.btn-show-more').addEventListener('click', loadMoreFeedback);
+      } else {
+        pag.innerHTML = '';
+      }
+    }
+
+    function loadFeedbackMessages() {
+      feedbackMessages = [];
+      feedbackPage = 0;
+      feedbackTotal = 0;
+      var list = document.getElementById('adminFeedbackList');
+      if (list) list.innerHTML = '<p class="admin-loading">Завантаження...</p>';
+      var pag = document.getElementById('adminFeedbackPagination');
+      if (pag) pag.innerHTML = '';
+      loadMoreFeedback();
+    }
+
+    function loadMoreFeedback() {
+      var list = document.getElementById('adminFeedbackList');
+      var badge = document.getElementById('feedbackBadge');
+      var tabBtn = document.getElementById('tabFeedbackBtn');
+      if (!list) return;
+      var pag = document.getElementById('adminFeedbackPagination');
+      if (pag) pag.innerHTML = '<button class="btn-show-more" disabled>Завантаження…</button>';
+
+      apiFetch('GET', '/admin/feedback?status=new&per_page=' + FEEDBACK_PER_PAGE + '&page=' + (feedbackPage + 1), null, token)
+        .then(function (res) {
+          if (!res.ok) throw new Error('http');
+          return res.json();
+        })
+        .then(function (resp) {
+          feedbackPage = resp.current_page || 1;
+          feedbackTotal = resp.total || 0;
+          var items = resp.data || [];
+          if (badge) badge.textContent = feedbackTotal || '';
+
+          if (!feedbackMessages.length && !items.length) {
+            list.innerHTML = '<div class="empty-state"><div class="empty-icon">&#9993;</div><p>Нових звернень немає</p></div>';
+            if (pag) pag.innerHTML = '';
+            return;
+          }
+
+          if (!feedbackMessages.length) list.innerHTML = '';
+          feedbackMessages = feedbackMessages.concat(items);
+          list.insertAdjacentHTML('beforeend', items.map(feedbackCardHtml).join(''));
+          bindFeedbackActions(list);
+          renderFeedbackPagination();
+        })
+        .catch(function () {
+          if (tabBtn) tabBtn.style.display = 'none';
+          if (list) list.innerHTML = '<p class="admin-loading">Помилка завантаження</p>';
+          if (pag) pag.innerHTML = '';
+        });
+    }
+
 function resetAlbums() {
       allAlbums = []; adminAlbumPage = 0; adminAlbumTotal = 0;
       var el = document.getElementById('adminAlbumList');
@@ -3145,6 +3342,14 @@ function resetAlbums() {
       .then(function (res) { return res.ok ? res.json() : null; })
       .then(function (resp) {
         var badge = document.getElementById('profilesBadge');
+        if (badge && resp) badge.textContent = resp.total || '';
+      })
+      .catch(function () {});
+
+    apiFetch('GET', '/admin/feedback?status=new&per_page=1&page=1', null, token)
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (resp) {
+        var badge = document.getElementById('feedbackBadge');
         if (badge && resp) badge.textContent = resp.total || '';
       })
       .catch(function () {});
@@ -3411,6 +3616,7 @@ function resetAlbums() {
     initActiveLink();
     initHeaderDate();
     initSidebarWidgets();
+    initFeedbackForm();
     initAnnouncementsPage();
     initRidesPage();
     initFadeIn();

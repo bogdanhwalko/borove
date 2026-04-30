@@ -28,6 +28,9 @@
         <button class="admin-tab" data-tab="profiles" id="tabProfilesBtn">
           &#128100; Профілі <span id="profilesBadge" class="pending-badge"></span>
         </button>
+        <button class="admin-tab" data-tab="feedback" id="tabFeedbackBtn">
+          &#9993; Звернення <span id="feedbackBadge" class="pending-badge"></span>
+        </button>
       </div>
 
       <div class="admin-section" id="tabArticles">
@@ -110,6 +113,14 @@
       <div class="admin-section" id="tabProfiles" style="display:none">
         <div id="adminProfilesList"><p class="admin-loading">Завантаження...</p></div>
         <div id="adminProfilesPagination"></div>
+      </div>
+
+      <div class="admin-section" id="tabFeedback" style="display:none">
+        <div class="admin-list-header">
+          <h3>Звернення з форми зворотного зв'язку</h3>
+        </div>
+        <div id="adminFeedbackList"><p class="admin-loading">Завантаження...</p></div>
+        <div id="adminFeedbackPagination"></div>
       </div>
 
       <div class="admin-section" id="tabGallery" style="display:none">

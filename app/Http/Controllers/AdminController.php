@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Article;
 use App\Models\Album;
 use App\Models\Announcement;
+use App\Models\FeedbackMessage;
 use App\Models\Photo;
 use App\Models\ProfileChangeRequest;
 use App\Models\Ride;
@@ -401,6 +402,55 @@ class AdminController extends Controller
             'action'      => 'profile_change_rejected',
             'description' => 'Зміни профілю відхилено адміністратором',
         ]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function indexFeedbackMessages(Request $request): JsonResponse
+    {
+        $this->guard($request);
+
+        $perPage = min((int) $request->input('per_page', 20), 100);
+        $status = $request->input('status', 'new');
+
+        $query = FeedbackMessage::with('user:id,last_name,first_name,nickname,phone')
+            ->orderByRaw("status = 'new' desc")
+            ->orderBy('created_at', 'desc');
+
+        if (in_array($status, ['new', 'closed'], true)) {
+            $query->where('status', $status);
+        }
+
+        $paged = $query->paginate($perPage);
+
+        return response()->json([
+            'data'         => $paged->items(),
+            'current_page' => $paged->currentPage(),
+            'last_page'    => $paged->lastPage(),
+            'total'        => $paged->total(),
+            'per_page'     => $paged->perPage(),
+        ]);
+    }
+
+    public function closeFeedbackMessage(Request $request, int $id): JsonResponse
+    {
+        $this->guard($request);
+
+        $message = FeedbackMessage::findOrFail($id);
+        $message->update([
+            'status'       => 'closed',
+            'closed_by_id' => $request->user()->id,
+            'closed_at'    => now(),
+        ]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function destroyFeedbackMessage(Request $request, int $id): JsonResponse
+    {
+        $this->guard($request);
+
+        FeedbackMessage::findOrFail($id)->delete();
 
         return response()->json(['ok' => true]);
     }

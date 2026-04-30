@@ -6,6 +6,7 @@ use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\RideController;
 use App\Http\Controllers\AlbumController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserAlbumController;
 use App\Http\Controllers\MarketController;
@@ -46,6 +47,9 @@ Route::middleware('auth:sanctum')->patch('/rides/{id}/seats', [RideController::c
 // Albums (public)
 Route::get('/albums',        [AlbumController::class, 'index']);
 Route::get('/albums/{slug}', [AlbumController::class, 'show']);
+
+// Feedback
+Route::middleware(['auth:sanctum', 'throttle:5,1'])->post('/feedback', [FeedbackController::class, 'store']);
 
 // Marketplace (public)
 Route::get('/products',    [MarketController::class, 'index']);
@@ -88,4 +92,8 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::get('/profile-requests',                   [AdminController::class, 'indexProfileRequests']);
     Route::post('/profile-requests/{id}/approve',     [AdminController::class, 'approveProfileRequest']);
     Route::post('/profile-requests/{id}/reject',      [AdminController::class, 'rejectProfileRequest']);
+
+    Route::get('/feedback',                 [AdminController::class, 'indexFeedbackMessages']);
+    Route::post('/feedback/{id}/close',     [AdminController::class, 'closeFeedbackMessage']);
+    Route::delete('/feedback/{id}',         [AdminController::class, 'destroyFeedbackMessage']);
 });
