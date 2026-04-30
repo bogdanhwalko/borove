@@ -25,6 +25,9 @@
         <button class="admin-tab" data-tab="moderation" id="tabModerationBtn">
           &#128276; Модерація <span id="pendingBadge" class="pending-badge"></span>
         </button>
+        <button class="admin-tab" data-tab="profiles" id="tabProfilesBtn">
+          &#128100; Профілі <span id="profilesBadge" class="pending-badge"></span>
+        </button>
       </div>
 
       <div class="admin-section" id="tabArticles">
@@ -64,8 +67,20 @@
                     <input type="date" id="artDate">
                   </div>
                   <div class="form-group">
-                    <label for="artImageSeed">Зображення (picsum seed)</label>
+                    <label for="artImageSeed">Picsum seed (запасний варіант)</label>
                     <input type="text" id="artImageSeed" placeholder="village-autumn" maxlength="100">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Фото статті (необов'язково, до 10 МБ)</label>
+                  <label class="file-upload-label" id="artImageLabel" for="artImage">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span id="artImageName">Вибрати фото</span>
+                  </label>
+                  <input type="file" id="artImage" accept="image/*" class="file-upload-input">
+                  <div id="artImageCurrent" class="art-image-current" style="display:none">
+                    <img id="artImageCurrentPreview" alt="Поточне фото">
+                    <button type="button" class="btn-cancel" id="artImageRemove" style="margin-left:auto">&#10005; Видалити фото</button>
                   </div>
                 </div>
                 <div class="form-group">
@@ -89,6 +104,12 @@
 
       <div class="admin-section" id="tabModeration" style="display:none">
         <div id="adminPendingList"><p class="admin-loading">Завантаження...</p></div>
+        <div id="adminPendingPagination"></div>
+      </div>
+
+      <div class="admin-section" id="tabProfiles" style="display:none">
+        <div id="adminProfilesList"><p class="admin-loading">Завантаження...</p></div>
+        <div id="adminProfilesPagination"></div>
       </div>
 
       <div class="admin-section" id="tabGallery" style="display:none">

@@ -8,7 +8,7 @@ class Article extends Model
 {
     protected $fillable = [
         'slug', 'category', 'title', 'summary', 'body',
-        'author', 'image_seed', 'views', 'published_at',
+        'author', 'image_seed', 'image_path', 'views', 'published_at',
     ];
 
     protected $casts = [

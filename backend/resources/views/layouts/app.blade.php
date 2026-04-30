@@ -9,7 +9,7 @@
   <title>@yield('title', 'Борове — Сільська газета')</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css?v={{ filemtime(public_path('css/style.css')) }}">
 </head>
 <body>
 

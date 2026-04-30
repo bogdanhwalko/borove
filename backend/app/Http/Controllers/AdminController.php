@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Article;
 use App\Models\Album;
 use App\Models\Announcement;
 use App\Models\Photo;
+use App\Models\ProfileChangeRequest;
 use App\Models\Ride;
+use App\Models\User;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -51,6 +55,7 @@ class AdminController extends Controller
             'body'         => 'required|string',
             'author'       => 'required|string|max:100',
             'image_seed'   => 'nullable|string|max:100',
+            'image'        => 'nullable|image|max:10240',
             'published_at' => 'nullable|date',
         ]);
 
@@ -61,6 +66,11 @@ class AdminController extends Controller
             $slug = $base . '-' . $n++;
         }
 
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('articles', 'public');
+        }
+
         $article = Article::create([
             'slug'         => $slug,
             'category'     => $data['category'],
@@ -69,6 +79,7 @@ class AdminController extends Controller
             'body'         => $data['body'],
             'author'       => $data['author'],
             'image_seed'   => $data['image_seed'] ?? Str::random(8),
+            'image_path'   => $imagePath,
             'published_at' => $data['published_at'] ?? now()->toDateString(),
             'views'        => 0,
         ]);
@@ -88,9 +99,25 @@ class AdminController extends Controller
             'summary'      => 'sometimes|string|max:500',
             'body'         => 'sometimes|string',
             'author'       => 'sometimes|string|max:100',
-            'image_seed'   => 'sometimes|string|max:100',
+            'image_seed'   => 'sometimes|nullable|string|max:100',
+            'image'        => 'sometimes|image|max:10240',
+            'remove_image' => 'sometimes|boolean',
             'published_at' => 'sometimes|date',
         ]);
+
+        if ($request->boolean('remove_image') && $article->image_path) {
+            Storage::disk('public')->delete($article->image_path);
+            $data['image_path'] = null;
+        }
+
+        if ($request->hasFile('image')) {
+            if ($article->image_path) {
+                Storage::disk('public')->delete($article->image_path);
+            }
+            $data['image_path'] = $request->file('image')->store('articles', 'public');
+        }
+
+        unset($data['image'], $data['remove_image']);
 
         $article->update($data);
 
@@ -100,7 +127,11 @@ class AdminController extends Controller
     public function destroyArticle(Request $request, int $id): JsonResponse
     {
         $this->guard($request);
-        Article::findOrFail($id)->delete();
+        $article = Article::findOrFail($id);
+        if ($article->image_path) {
+            Storage::disk('public')->delete($article->image_path);
+        }
+        $article->delete();
 
         return response()->json(['ok' => true]);
     }
@@ -138,13 +169,20 @@ class AdminController extends Controller
     {
         $this->guard($request);
 
-        $albums = Album::where('status', 'pending')
+        $perPage = min((int) $request->input('per_page', 20), 100);
+        $paged = Album::where('status', 'pending')
             ->with(['photos', 'user:id,nickname,first_name,last_name'])
             ->withCount('photos')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate($perPage);
 
-        return response()->json($albums);
+        return response()->json([
+            'data'         => $paged->items(),
+            'current_page' => $paged->currentPage(),
+            'last_page'    => $paged->lastPage(),
+            'total'        => $paged->total(),
+            'per_page'     => $paged->perPage(),
+        ]);
     }
 
     public function publishAlbum(Request $request, int $id): JsonResponse
@@ -254,6 +292,115 @@ class AdminController extends Controller
         }
 
         $photo->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    // ── Profile change moderation ──────────────────────────────
+
+    public function indexProfileRequests(Request $request): JsonResponse
+    {
+        $this->guard($request);
+
+        $perPage = min((int) $request->input('per_page', 20), 100);
+        $paged = ProfileChangeRequest::where('status', 'pending')
+            ->with('user:id,last_name,first_name,patronymic,street,nickname,phone,avatar_path')
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        return response()->json([
+            'data'         => $paged->items(),
+            'current_page' => $paged->currentPage(),
+            'last_page'    => $paged->lastPage(),
+            'total'        => $paged->total(),
+            'per_page'     => $paged->perPage(),
+        ]);
+    }
+
+    public function approveProfileRequest(Request $request, int $id): JsonResponse
+    {
+        $this->guard($request);
+
+        $req = ProfileChangeRequest::with('user')->findOrFail($id);
+        if ($req->status !== 'pending') {
+            return response()->json(['message' => 'Запит уже оброблено'], 422);
+        }
+
+        $user    = $req->user;
+        $payload = is_array($req->payload) ? $req->payload : [];
+        $changes = [];
+
+        // Re-validate uniqueness (someone else might have taken the nickname/phone since submission)
+        if (!empty($payload['nickname'])) {
+            $taken = User::where('nickname', $payload['nickname'])->where('id', '!=', $user->id)->exists();
+            if ($taken) {
+                throw ValidationException::withMessages(['nickname' => ['Нікнейм уже зайнятий — попросіть користувача обрати інший']]);
+            }
+        }
+        if (!empty($payload['phone'])) {
+            $taken = User::where('phone', $payload['phone'])->where('id', '!=', $user->id)->exists();
+            if ($taken) {
+                throw ValidationException::withMessages(['phone' => ['Телефон уже зайнятий']]);
+            }
+        }
+
+        foreach ($payload as $k => $v) {
+            $changes[$k] = $v;
+        }
+
+        if ($req->avatar_path) {
+            // Move from avatars-pending to avatars (by re-using the same path is fine since both are 'public')
+            if ($user->avatar_path && $user->avatar_path !== $req->avatar_path) {
+                Storage::disk('public')->delete($user->avatar_path);
+            }
+            $changes['avatar_path'] = $req->avatar_path;
+        }
+
+        if (!empty($changes)) {
+            $user->update($changes);
+        }
+
+        $req->update([
+            'status'         => 'approved',
+            'reviewed_by_id' => $request->user()->id,
+            'reviewed_at'    => now(),
+        ]);
+
+        ActivityLog::create([
+            'user_id'     => $user->id,
+            'action'      => 'profile_change_approved',
+            'description' => 'Зміни профілю схвалено адміністратором',
+        ]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function rejectProfileRequest(Request $request, int $id): JsonResponse
+    {
+        $this->guard($request);
+
+        $req = ProfileChangeRequest::findOrFail($id);
+        if ($req->status !== 'pending') {
+            return response()->json(['message' => 'Запит уже оброблено'], 422);
+        }
+
+        // Discard pending avatar file (was uploaded into avatars-pending bucket)
+        if ($req->avatar_path) {
+            Storage::disk('public')->delete($req->avatar_path);
+        }
+
+        $req->update([
+            'status'         => 'rejected',
+            'reviewed_by_id' => $request->user()->id,
+            'reviewed_at'    => now(),
+            'avatar_path'    => null,
+        ]);
+
+        ActivityLog::create([
+            'user_id'     => $req->user_id,
+            'action'      => 'profile_change_rejected',
+            'description' => 'Зміни профілю відхилено адміністратором',
+        ]);
 
         return response()->json(['ok' => true]);
     }

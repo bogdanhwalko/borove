@@ -81,4 +81,8 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
 
     Route::post('/albums/{id}/photos',  [AdminController::class, 'storePhoto']);
     Route::delete('/photos/{id}',       [AdminController::class, 'destroyPhoto']);
+
+    Route::get('/profile-requests',                   [AdminController::class, 'indexProfileRequests']);
+    Route::post('/profile-requests/{id}/approve',     [AdminController::class, 'approveProfileRequest']);
+    Route::post('/profile-requests/{id}/reject',      [AdminController::class, 'rejectProfileRequest']);
 });

@@ -8,6 +8,7 @@ Route::get('/rides',          fn() => view('pages.rides'));
 Route::get('/announcements',  fn() => view('pages.announcements'));
 Route::get('/gallery',        fn() => view('pages.gallery'));
 Route::get('/gallery/{slug}', fn() => view('pages.album'));
+Route::get('/articles',       fn() => view('pages.articles'));
 Route::get('/articles/{slug}',fn() => view('pages.article'));
 Route::get('/auth',           fn() => view('pages.auth'));
 Route::get('/admin',          fn() => view('pages.admin'));

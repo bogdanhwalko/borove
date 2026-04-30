@@ -121,7 +121,26 @@
 
   function albumCoverUrl(album, w, h) {
     if (album.cover_path) return '/storage/' + album.cover_path;
-    return 'https://picsum.photos/seed/' + album.cover_seed + '/' + w + '/' + h;
+    return 'https://picsum.photos/seed/' + encodeURIComponent(album.cover_seed || '') + '/' + w + '/' + h;
+  }
+
+  function articleImg(a, w, h) {
+    if (a && a.image_path) return '/storage/' + a.image_path;
+    var seed = (a && (a.image_seed || a.slug)) || 'article';
+    return 'https://picsum.photos/seed/' + encodeURIComponent(seed) + '/' + w + '/' + h;
+  }
+
+  /* CSP-friendly: one global capture-phase error listener instead of inline onerror */
+  function initImgErrorFallback() {
+    document.addEventListener('error', function (e) {
+      var t = e.target;
+      if (!t || t.tagName !== 'IMG') return;
+      var parent = t.parentNode;
+      if (parent && parent.classList && parent.classList.contains('card-img')) {
+        t.style.display = 'none';
+        parent.classList.add('card-img--no-img');
+      }
+    }, true);
   }
 
   /* ── simple XSS guard ────────────────────────── */
@@ -354,16 +373,17 @@
             });
             return res.json();
           })
-          .then(function (ann) {
-            allAnn.unshift(ann);
-            render('all');
+          .then(function () {
             $$('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
             var allBtn = $('[data-filter="all"]');
             if (allBtn) allBtn.classList.add('active');
+            annFilter = 'all';
+            annPage = 1;
             form.reset();
             if (imgName) { imgName.textContent = 'Вибрати фото'; }
             if (imgLabel) { imgLabel.classList.remove('has-file'); }
             showToast('✓ Оголошення додано!');
+            loadPage();
             list.scrollIntoView({ behavior: 'smooth', block: 'start' });
           })
           .catch(function (err) {
@@ -646,7 +666,7 @@
 
         var heroEl = $('#articleHero');
         if (heroEl) {
-          heroEl.querySelector('img').src = 'https://picsum.photos/seed/' + a.image_seed + '/1400/500';
+          heroEl.querySelector('img').src = articleImg(a, 1400, 500);
           heroEl.querySelector('img').alt = a.title;
         }
 
@@ -734,14 +754,14 @@
     var submitForm   = document.getElementById('gallerySubmitForm');
     var user = getCachedUser();
 
-    if (submitWrap && user) {
-      submitWrap.style.display = '';
+    if (submitToggle && user) {
+      submitToggle.style.display = '';
 
       submitToggle.addEventListener('click', function () {
-        var open = submitForm.style.display === 'none';
-        submitForm.style.display = open ? '' : 'none';
-        submitToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        submitToggle.textContent = open ? '&#x2715; Закрити' : '+ Додати фотоальбом';
+        var willOpen = (submitWrap.style.display === 'none');
+        submitWrap.style.display = willOpen ? '' : 'none';
+        submitToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        submitToggle.innerHTML = willOpen ? '&#x2715; Закрити' : '&#43; Додати фотоальбом';
       });
 
       // Photo preview
@@ -829,9 +849,9 @@
               photosLabel.classList.remove('has-file');
               previewBox.style.display = 'none';
               previewBox.innerHTML = '';
-              submitForm.style.display = 'none';
+              submitWrap.style.display = 'none';
               submitToggle.setAttribute('aria-expanded', 'false');
-              submitToggle.textContent = '+ Додати фотоальбом';
+              submitToggle.innerHTML = '&#43; Додати фотоальбом';
               showToast('✓ Альбом відправлено на модерацію!');
             })
             .catch(function (err) {
@@ -912,15 +932,11 @@
     var loadedArts = [], artPageIdx = 0;
     var PER_PAGE = 6;
 
-    function articleImgUrl(a, w, h) {
-      return 'https://picsum.photos/seed/' + (a.image_seed || a.slug) + '/' + w + '/' + h;
-    }
-
     function renderFeatured(a) {
       if (!featured || !a) return;
       featured.innerHTML =
         '<article class="featured-article">' +
-          '<img class="article-image" src="' + articleImgUrl(a, 1200, 400) + '" alt="' + escHtml(a.title) + '" loading="lazy">' +
+          '<img class="article-image" src="' + articleImg(a, 1200, 400) + '" alt="' + escHtml(a.title) + '" loading="lazy">' +
           '<div class="article-body">' +
             '<span class="article-category">&#11088; ' + escHtml(a.category) + '</span>' +
             '<h2>' + escHtml(a.title) + '</h2>' +
@@ -944,7 +960,7 @@
       grid.innerHTML = cards.map(function (a) {
         return '<article class="article-card">' +
           '<div class="card-img">' +
-            '<img src="' + articleImgUrl(a, 600, 300) + '" alt="' + escHtml(a.title) + '" loading="lazy">' +
+            '<img src="' + articleImg(a, 600, 300) + '" alt="' + escHtml(a.title) + '" loading="lazy">' +
             '<span class="article-category">' + escHtml(a.category) + '</span>' +
           '</div>' +
           '<div class="card-body">' +
@@ -970,6 +986,93 @@
         })
         .catch(function () {
           grid.innerHTML = '<div class="empty-state"><p>Помилка завантаження</p></div>';
+        });
+    }
+
+    loadMore();
+  }
+
+  /* ── all articles page ───────────────────────── */
+  function initArticlesListPage() {
+    var grid = document.getElementById('articlesListGrid');
+    if (!grid) return;
+
+    var pagEl = document.getElementById('articlesListPagination');
+    var ARTS_PER_PAGE = 12;
+    var artListPage = 0;
+    var artListTotal = 0;
+    var renderedCount = 0;
+    var firstBatch = true;
+
+    function pluralStattya(n) {
+      var mod10 = n % 10, mod100 = n % 100;
+      if (mod10 === 1 && mod100 !== 11) return 'статтю';
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'статті';
+      return 'статей';
+    }
+
+    function cardHtml(a) {
+      return '<article class="article-card fade-in">' +
+        '<div class="card-img">' +
+          '<img src="' + articleImg(a, 800, 500) + '" alt="' + escHtml(a.title) + '" loading="lazy">' +
+          '<span class="article-category">' + escHtml(a.category) + '</span>' +
+        '</div>' +
+        '<div class="card-body">' +
+          '<h3>' + escHtml(a.title) + '</h3>' +
+          '<p>' + escHtml(a.summary) + '</p>' +
+          '<div class="card-footer">' +
+            '<span class="card-date">&#128197; ' + fmtIsoDate(a.published_at ? String(a.published_at).substring(0, 10) : '') + '</span>' +
+            '<a href="/articles/' + encodeURIComponent(a.slug) + '" class="btn-read">Читати &#8594;</a>' +
+          '</div>' +
+        '</div>' +
+      '</article>';
+    }
+
+    function renderPagination() {
+      if (!pagEl) return;
+      var remaining = artListTotal - renderedCount;
+      if (remaining > 0) {
+        var n = Math.min(remaining, ARTS_PER_PAGE);
+        pagEl.innerHTML = '<button class="btn-show-more">+ Показати ще ' + n + ' ' + pluralStattya(n) + '</button>';
+        pagEl.querySelector('.btn-show-more').addEventListener('click', loadMore);
+      } else {
+        pagEl.innerHTML = '';
+      }
+    }
+
+    function appendArticles(items) {
+      if (firstBatch) {
+        grid.innerHTML = '';
+        firstBatch = false;
+      }
+      grid.insertAdjacentHTML('beforeend', items.map(cardHtml).join(''));
+      var fresh = Array.prototype.slice.call(grid.querySelectorAll('.article-card.fade-in:not(.visible)'));
+      observeFadeIn(fresh);
+      renderedCount += items.length;
+    }
+
+    function loadMore() {
+      var nextPage = artListPage + 1;
+      if (pagEl) pagEl.innerHTML = '<button class="btn-show-more" disabled>Завантаження…</button>';
+      apiFetch('GET', '/articles?per_page=' + ARTS_PER_PAGE + '&page=' + nextPage)
+        .then(function (res) { return res.json(); })
+        .then(function (resp) {
+          artListPage = resp.current_page;
+          artListTotal = resp.total;
+          var items = resp.data || [];
+          if (firstBatch && !items.length) {
+            grid.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128240;</div><p>Статей ще немає</p></div>';
+            if (pagEl) pagEl.innerHTML = '';
+            return;
+          }
+          appendArticles(items);
+          renderPagination();
+        })
+        .catch(function () {
+          if (firstBatch) {
+            grid.innerHTML = '<div class="empty-state"><p>Не вдалося завантажити статті</p></div>';
+          }
+          if (pagEl) pagEl.innerHTML = '';
         });
     }
 
@@ -1127,33 +1230,45 @@
   function initUserArea() {
     var li = document.getElementById('navAuthLi');
     if (!li) return;
-    var user = getCachedUser();
+    var user  = getCachedUser();
+    var token = getToken();
+    if (!user || !token) { clearSession(); user = null; }
     if (user) {
-      var profileLi = document.getElementById('navProfileLi');
-      if (profileLi) profileLi.style.display = '';
       var display = escHtml(user.nickname || user.first_name || 'Користувач');
       var avatarHtml = user.avatar_path
         ? '<img src="/storage/' + user.avatar_path + '" class="nav-avatar" alt="">'
         : '<span class="nav-avatar nav-avatar--initials">' + escHtml((user.first_name || user.nickname || '?')[0].toUpperCase()) + '</span>';
       li.innerHTML =
         (user.is_admin ? '<a href="/admin" class="btn-nav-admin" title="Адмінпанель">&#9881;</a>' : '') +
-        '<span class="nav-user-info">' + avatarHtml + display + '</span>' +
+        '<a href="/profile" class="nav-user-info">' + avatarHtml + '<span class="nav-user-name">' + display + '</span></a>' +
         '<button class="btn-nav-logout" id="btnNavLogout">Вийти</button>';
 
-      // Mobile drawer user card — inserted right after drawer-head
+      // Mobile drawer user card — inserted right after drawer-head, links to /profile
       var menu = document.getElementById('siteMenu');
       var drawerHead = menu ? menu.querySelector('.drawer-head') : null;
       if (menu) {
         var bigAvatar = user.avatar_path
           ? '<img src="/storage/' + user.avatar_path + '" class="nav-avatar drawer-avatar" alt="">'
           : '<span class="nav-avatar nav-avatar--initials drawer-avatar">' + escHtml((user.first_name || user.nickname || '?')[0].toUpperCase()) + '</span>';
-        var card = document.createElement('div');
+        var card = document.createElement('a');
         card.className = 'drawer-user-card';
-        card.innerHTML = bigAvatar + '<div class="drawer-user-name">' + display + '</div>';
+        card.href = '/profile';
+        card.setAttribute('aria-label', 'Перейти у профіль');
+        card.innerHTML = bigAvatar +
+          '<div class="drawer-user-name">' + display + '</div>' +
+          '<span class="drawer-user-arrow" aria-hidden="true">&#8250;</span>';
         if (drawerHead) {
           drawerHead.parentNode.insertBefore(card, drawerHead.nextSibling);
         } else {
           menu.insertBefore(card, menu.firstChild);
+        }
+
+        if (user.is_admin) {
+          var adminLink = document.createElement('a');
+          adminLink.className = 'drawer-admin-link';
+          adminLink.href = '/admin';
+          adminLink.innerHTML = '&#9881;&#65039; <span>Адмінпанель</span>';
+          card.parentNode.insertBefore(adminLink, card.nextSibling);
         }
       }
 
@@ -1249,7 +1364,7 @@
       btn.addEventListener('click', function () { switchTab(this.getAttribute('data-tab')); });
     });
 
-    if (/[?&]tab=register/.test(window.location.search)) switchTab('register');
+    switchTab(/[?&]tab=register/.test(window.location.search) ? 'register' : 'login');
 
     var pwToggles = Array.prototype.slice.call(document.querySelectorAll('.btn-pw-toggle'));
     pwToggles.forEach(function (btn) {
@@ -1387,7 +1502,7 @@
     if (!name) return '';
     var sid = p.shop_id || (p.shop && p.shop.id);
     return sid
-      ? '<a href="shop.html?shop=' + sid + '" class="product-seller-link">' + escHtml(name) + '</a>'
+      ? '<a href="/shop?shop=' + sid + '" class="product-seller-link">' + escHtml(name) + '</a>'
       : escHtml(name);
   }
 
@@ -1903,7 +2018,7 @@
               ? '<span style="font-weight:700;color:var(--p)">' + Number(p.price).toLocaleString('uk-UA') + ' грн</span>'
               : '<span style="color:var(--muted);font-size:.78rem">за домовленістю</span>';
             var sid = p.shop_id || (p.shop && p.shop.id);
-            var shopUrl = sid ? 'shop.html?shop=' + sid : 'shop.html';
+            var shopUrl = sid ? '/shop?shop=' + sid : '/shop';
             var imgHtml = p.photo_path
               ? '<img class="product-card-img product-card-img--clickable" src="' + photoSrc(p.photo_path) + '" alt="' + escHtml(p.title) + '" loading="lazy" data-src="' + photoSrc(p.photo_path) + '" data-alt="' + escHtml(p.title) + '">'
               : '<div class="product-card-img-placeholder">&#128717;</div>';
@@ -1937,7 +2052,7 @@
     withReqs.sort(function (a, b) { return b.purchase_requests_count - a.purchase_requests_count; });
     var p   = withReqs[0];
     var sid = p.shop_id || (p.shop && p.shop.id);
-    var shopUrl = sid ? 'shop.html?shop=' + sid : 'shop.html';
+    var shopUrl = sid ? '/shop?shop=' + sid : '/shop';
 
     var count   = p.purchase_requests_count;
     var imgSrc  = p.photo_path ? photoSrc(p.photo_path) : null;
@@ -2000,6 +2115,7 @@
         });
         if (name === 'gallery') loadAlbums();
         if (name === 'moderation') loadPendingAlbums();
+        if (name === 'profiles') loadProfileRequests();
       });
     });
 
@@ -2082,11 +2198,27 @@
       }
     }
 
+    var artImageRemoved = false;
+
+    function refreshArtImagePreview(article) {
+      var box     = document.getElementById('artImageCurrent');
+      var img     = document.getElementById('artImageCurrentPreview');
+      if (!box || !img) return;
+      if (article && article.image_path && !artImageRemoved) {
+        img.src = '/storage/' + article.image_path;
+        box.style.display = '';
+      } else {
+        img.removeAttribute('src');
+        box.style.display = 'none';
+      }
+    }
+
     function editArticle(id) {
       var a = allArticles.find(function (x) { return x.id === id; });
       if (!a) return;
       artMode      = 'edit';
       editingArtId = id;
+      artImageRemoved = false;
       document.getElementById('articleFormTitle').textContent = '✏️ Редагувати статтю';
       document.getElementById('articleId').value      = id;
       document.getElementById('artTitle').value       = a.title;
@@ -2096,15 +2228,54 @@
       document.getElementById('artImageSeed').value   = a.image_seed || '';
       document.getElementById('artSummary').value     = a.summary;
       document.getElementById('artBody').value        = a.body;
+      var artImgInp = document.getElementById('artImage');
+      var artImgNm  = document.getElementById('artImageName');
+      var artImgLbl = document.getElementById('artImageLabel');
+      if (artImgInp) artImgInp.value = '';
+      if (artImgNm)  artImgNm.textContent = 'Вибрати фото';
+      if (artImgLbl) artImgLbl.classList.remove('has-file');
+      refreshArtImagePreview(a);
       document.getElementById('articleFormCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function resetArticleForm() {
       artMode      = 'new';
       editingArtId = null;
+      artImageRemoved = false;
       document.getElementById('articleFormTitle').textContent = '📝 Нова стаття';
       document.getElementById('articleId').value = '';
       document.getElementById('articleForm').reset();
+      var artImgNm  = document.getElementById('artImageName');
+      var artImgLbl = document.getElementById('artImageLabel');
+      if (artImgNm)  artImgNm.textContent = 'Вибрати фото';
+      if (artImgLbl) artImgLbl.classList.remove('has-file');
+      refreshArtImagePreview(null);
+    }
+
+    var artImgInp = document.getElementById('artImage');
+    var artImgLbl = document.getElementById('artImageLabel');
+    var artImgNm  = document.getElementById('artImageName');
+    if (artImgInp && artImgLbl && artImgNm) {
+      artImgInp.addEventListener('change', function () {
+        if (artImgInp.files[0]) {
+          artImgNm.textContent = artImgInp.files[0].name;
+          artImgLbl.classList.add('has-file');
+          artImageRemoved = false;
+        } else {
+          artImgNm.textContent = 'Вибрати фото';
+          artImgLbl.classList.remove('has-file');
+        }
+      });
+    }
+    var artImgRm = document.getElementById('artImageRemove');
+    if (artImgRm) {
+      artImgRm.addEventListener('click', function () {
+        artImageRemoved = true;
+        document.getElementById('artImageCurrent').style.display = 'none';
+        if (artImgInp) artImgInp.value = '';
+        if (artImgNm)  artImgNm.textContent = 'Вибрати фото';
+        if (artImgLbl) artImgLbl.classList.remove('has-file');
+      });
     }
 
     var artForm = document.getElementById('articleForm');
@@ -2120,24 +2291,36 @@
           showToast('Заповніть усі обов\'язкові поля');
           return;
         }
-        var payload = {
-          title: title, category: category, author: author,
-          summary: summary, body: body,
-          image_seed:   document.getElementById('artImageSeed').value.trim() || undefined,
-          published_at: document.getElementById('artDate').value || undefined,
-        };
+        var fd = new FormData();
+        fd.append('title',    title);
+        fd.append('category', category);
+        fd.append('author',   author);
+        fd.append('summary',  summary);
+        fd.append('body',     body);
+        var seed = document.getElementById('artImageSeed').value.trim();
+        if (seed) fd.append('image_seed', seed);
+        var pubDate = document.getElementById('artDate').value;
+        if (pubDate) fd.append('published_at', pubDate);
+        if (artImgInp && artImgInp.files[0]) fd.append('image', artImgInp.files[0]);
+        if (artMode === 'edit' && artImageRemoved) fd.append('remove_image', '1');
+        if (artMode === 'edit') fd.append('_method', 'PUT');
+
         var btn = artForm.querySelector('button[type="submit"]');
         btn.disabled = true;
-        var method = artMode === 'edit' ? 'PUT'  : 'POST';
-        var path   = artMode === 'edit' ? '/admin/articles/' + editingArtId : '/admin/articles';
-        apiFetch(method, path, payload, token)
-          .then(function (res) { if (!res.ok) throw new Error(); return res.json(); })
+        var path = artMode === 'edit' ? '/admin/articles/' + editingArtId : '/admin/articles';
+        apiUpload('POST', path, fd, token)
+          .then(function (res) {
+            if (!res.ok) return res.json().then(function (d) {
+              throw new Error(d.errors ? Object.values(d.errors)[0][0] : (d.message || 'error'));
+            });
+            return res.json();
+          })
           .then(function () {
             showToast(artMode === 'edit' ? '✓ Статтю оновлено' : '✓ Статтю додано');
             resetArticleForm();
             resetArticles();
           })
-          .catch(function () { showToast('Помилка збереження'); })
+          .catch(function (err) { showToast(err.message || 'Помилка збереження'); })
           .finally(function () { btn.disabled = false; });
       });
     }
@@ -2162,79 +2345,316 @@
     var selectedAlbum    = null;
     var currentPhotos    = [];
 
+    var pendingAlbums = [];
+    var pendingPage   = 0;
+    var pendingTotal  = 0;
+    var PENDING_PER_PAGE = 20;
+
+    function pendingCardHtml(a) {
+      var submitter = a.user
+        ? escHtml(a.user.nickname || a.user.first_name || 'Користувач')
+        : 'Невідомо';
+      var thumbs = (a.photos || []).map(function (p) {
+        var src = p.file_path ? '/storage/' + p.file_path : 'https://picsum.photos/seed/' + encodeURIComponent(p.image_seed || '') + '/160/160';
+        return '<img class="pending-card-thumb" src="' + src + '" alt="" loading="lazy" data-full="' + src.replace(/\/160\/160$/, '/1400/1000') + '">';
+      }).join('');
+      var desc = a.description
+        ? '<p class="pending-card-desc">' + escHtml(a.description) + '</p>'
+        : '';
+      return '<div class="pending-card" data-id="' + a.id + '">' +
+        '<div class="pending-card-header">' +
+          '<div class="pending-card-info">' +
+            '<div class="pending-card-title">' + escHtml(a.title) + '</div>' +
+            '<div class="pending-card-meta">&#128100; ' + submitter +
+              ' &nbsp;&middot;&nbsp; &#128197; ' + fmtIsoDate(a.album_date) +
+              ' &nbsp;&middot;&nbsp; &#128247; ' + (a.photos_count || 0) + ' фото' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        (thumbs ? '<div class="pending-card-photos">' + thumbs + '</div>' : '') +
+        desc +
+        '<div class="pending-card-actions">' +
+          '<button class="btn-publish" data-id="' + a.id + '">&#10003; Опублікувати</button>' +
+          '<button class="btn-reject"  data-id="' + a.id + '">&#10005; Відхилити</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function bindPendingActions(scope) {
+      scope.querySelectorAll('.btn-publish').forEach(function (btn) {
+        if (btn.dataset.bound) return;
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', function () {
+          var id = parseInt(btn.dataset.id, 10);
+          btn.disabled = true;
+          apiFetch('POST', '/admin/albums/' + id + '/publish', {}, token)
+            .then(function (res) { if (!res.ok) throw new Error(); })
+            .then(function () {
+              showToast('✓ Альбом опубліковано');
+              loadPendingAlbums();
+              loadAlbums();
+            })
+            .catch(function () { showToast('Помилка'); btn.disabled = false; });
+        });
+      });
+      scope.querySelectorAll('.btn-reject').forEach(function (btn) {
+        if (btn.dataset.bound) return;
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', function () {
+          if (!confirm('Відхилити та видалити цей альбом?')) return;
+          var id = parseInt(btn.dataset.id, 10);
+          btn.disabled = true;
+          apiFetch('DELETE', '/admin/albums/' + id, null, token)
+            .then(function (res) { if (!res.ok) throw new Error(); })
+            .then(function () {
+              showToast('Альбом відхилено');
+              loadPendingAlbums();
+            })
+            .catch(function () { showToast('Помилка'); btn.disabled = false; });
+        });
+      });
+      scope.querySelectorAll('.pending-card-thumb').forEach(function (img) {
+        if (img.dataset.bound) return;
+        img.dataset.bound = '1';
+        img.style.cursor = 'zoom-in';
+        img.addEventListener('click', function () {
+          openSingleLightbox(img.dataset.full || img.src, img.alt || '');
+        });
+      });
+    }
+
+    function renderPendingPagination() {
+      var pag = document.getElementById('adminPendingPagination');
+      if (!pag) return;
+      var remaining = pendingTotal - pendingAlbums.length;
+      if (remaining > 0) {
+        pag.innerHTML = '<button class="btn-show-more">+ Показати ще ' + Math.min(remaining, PENDING_PER_PAGE) + ' альбом' + pluralUa(Math.min(remaining, PENDING_PER_PAGE)) + '</button>';
+        pag.querySelector('.btn-show-more').addEventListener('click', loadMorePending);
+      } else {
+        pag.innerHTML = '';
+      }
+    }
+
     function loadPendingAlbums() {
-      var list    = document.getElementById('adminPendingList');
-      var badge   = document.getElementById('pendingBadge');
-      var tabBtn  = document.getElementById('tabModerationBtn');
+      pendingAlbums = [];
+      pendingPage   = 0;
+      pendingTotal  = 0;
+      var list = document.getElementById('adminPendingList');
+      if (list) list.innerHTML = '<p class="admin-loading">Завантаження...</p>';
+      var pag = document.getElementById('adminPendingPagination');
+      if (pag) pag.innerHTML = '';
+      loadMorePending();
+    }
+
+    function loadMorePending() {
+      var list   = document.getElementById('adminPendingList');
+      var badge  = document.getElementById('pendingBadge');
+      var tabBtn = document.getElementById('tabModerationBtn');
       if (!list) return;
+      var pag = document.getElementById('adminPendingPagination');
+      if (pag) pag.innerHTML = '<button class="btn-show-more" disabled>Завантаження…</button>';
 
-      apiFetch('GET', '/admin/albums/pending', null, token)
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-          if (badge) badge.textContent = data.length || '';
-          if (!data.length) { list.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128247;</div><p>Немає альбомів на модерацію</p></div>'; return; }
-
-          list.innerHTML = data.map(function (a) {
-            var submitter = a.user
-              ? escHtml(a.user.nickname || a.user.first_name || 'Користувач')
-              : 'Невідомо';
-            var thumbs = (a.photos || []).slice(0, 6).map(function (p) {
-              var src = p.file_path ? '/storage/' + p.file_path : 'https://picsum.photos/seed/' + p.image_seed + '/160/160';
-              return '<img class="pending-card-thumb" src="' + src + '" alt="" loading="lazy">';
-            }).join('');
-            var desc = a.description
-              ? '<p class="pending-card-desc">' + escHtml(a.description) + '</p>'
-              : '';
-            return '<div class="pending-card" data-id="' + a.id + '">' +
-              '<div class="pending-card-header">' +
-                '<div class="pending-card-info">' +
-                  '<div class="pending-card-title">' + escHtml(a.title) + '</div>' +
-                  '<div class="pending-card-meta">&#128100; ' + submitter +
-                    ' &nbsp;&middot;&nbsp; &#128197; ' + fmtIsoDate(a.album_date) +
-                    ' &nbsp;&middot;&nbsp; &#128247; ' + (a.photos_count || 0) + ' фото' +
-                  '</div>' +
-                '</div>' +
-              '</div>' +
-              (thumbs ? '<div class="pending-card-photos">' + thumbs + '</div>' : '') +
-              desc +
-              '<div class="pending-card-actions">' +
-                '<button class="btn-publish" data-id="' + a.id + '">&#10003; Опублікувати</button>' +
-                '<button class="btn-reject"  data-id="' + a.id + '">&#10005; Відхилити</button>' +
-              '</div>' +
-            '</div>';
-          }).join('');
-
-          list.querySelectorAll('.btn-publish').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-              var id = parseInt(btn.dataset.id, 10);
-              btn.disabled = true;
-              apiFetch('POST', '/admin/albums/' + id + '/publish', {}, token)
-                .then(function (res) { if (!res.ok) throw new Error(); })
-                .then(function () {
-                  showToast('✓ Альбом опубліковано');
-                  loadPendingAlbums();
-                  loadAlbums();
-                })
-                .catch(function () { showToast('Помилка'); btn.disabled = false; });
-            });
-          });
-
-          list.querySelectorAll('.btn-reject').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-              if (!confirm('Відхилити та видалити цей альбом?')) return;
-              var id = parseInt(btn.dataset.id, 10);
-              btn.disabled = true;
-              apiFetch('DELETE', '/admin/albums/' + id, null, token)
-                .then(function (res) { if (!res.ok) throw new Error(); })
-                .then(function () {
-                  showToast('Альбом відхилено');
-                  loadPendingAlbums();
-                })
-                .catch(function () { showToast('Помилка'); btn.disabled = false; });
-            });
-          });
+      apiFetch('GET', '/admin/albums/pending?per_page=' + PENDING_PER_PAGE + '&page=' + (pendingPage + 1), null, token)
+        .then(function (res) {
+          if (!res.ok) throw new Error('http');
+          return res.json();
         })
-        .catch(function () { if (tabBtn) tabBtn.style.display = 'none'; });
+        .then(function (resp) {
+          pendingPage  = resp.current_page || 1;
+          pendingTotal = resp.total || 0;
+          var items = resp.data || [];
+          if (badge) badge.textContent = pendingTotal || '';
+
+          if (!pendingAlbums.length && !items.length) {
+            list.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128247;</div><p>Немає альбомів на модерацію</p></div>';
+            if (pag) pag.innerHTML = '';
+            return;
+          }
+
+          if (!pendingAlbums.length) list.innerHTML = '';
+          pendingAlbums = pendingAlbums.concat(items);
+          list.insertAdjacentHTML('beforeend', items.map(pendingCardHtml).join(''));
+          bindPendingActions(list);
+          renderPendingPagination();
+        })
+        .catch(function () {
+          if (tabBtn) tabBtn.style.display = 'none';
+          if (list) list.innerHTML = '<p class="admin-loading">Помилка завантаження</p>';
+          if (pag) pag.innerHTML = '';
+        });
+    }
+
+    /* ── Profile change moderation ─────────────────── */
+    var profileRequests = [];
+    var profileReqPage  = 0;
+    var profileReqTotal = 0;
+    var PROFILE_REQ_PER_PAGE = 20;
+
+    var FIELD_LABELS = {
+      first_name: "Ім'я",
+      last_name:  'Прізвище',
+      patronymic: 'По батькові',
+      street:     'Вулиця',
+      nickname:   'Нікнейм',
+      phone:      'Телефон'
+    };
+
+    function fmtFieldValue(key, val) {
+      if (val == null || val === '') return '<em class="text-muted">—</em>';
+      if (key === 'phone') {
+        var s = String(val);
+        return escHtml(s.charAt(0) === '0' ? '+38' + s : '+380' + s);
+      }
+      return escHtml(String(val));
+    }
+
+    function profileRequestCardHtml(req) {
+      var u = req.user || {};
+      var fullName = [u.last_name, u.first_name, u.patronymic].filter(Boolean).join(' ') || u.nickname || ('Користувач #' + (u.id || ''));
+      var diffRows = '';
+      var payload = req.payload || {};
+
+      Object.keys(payload).forEach(function (k) {
+        if (!FIELD_LABELS[k]) return;
+        diffRows +=
+          '<tr>' +
+            '<td class="prof-diff-label">' + escHtml(FIELD_LABELS[k]) + '</td>' +
+            '<td class="prof-diff-old">' + fmtFieldValue(k, u[k]) + '</td>' +
+            '<td class="prof-diff-arrow">&#8594;</td>' +
+            '<td class="prof-diff-new">' + fmtFieldValue(k, payload[k]) + '</td>' +
+          '</tr>';
+      });
+
+      var avatarBlock = '';
+      if (req.avatar_path) {
+        var currentAv = u.avatar_path
+          ? '<img src="/storage/' + escHtml(u.avatar_path) + '" alt="Поточне фото" class="prof-av prof-av--current">'
+          : '<div class="prof-av prof-av--empty">' + escHtml(((u.first_name || u.nickname || '?')[0] || '?').toUpperCase()) + '</div>';
+        avatarBlock =
+          '<div class="prof-avatar-diff">' +
+            '<div class="prof-avatar-diff-col"><div class="prof-avatar-diff-cap">Поточне</div>' + currentAv + '</div>' +
+            '<div class="prof-diff-arrow">&#8594;</div>' +
+            '<div class="prof-avatar-diff-col"><div class="prof-avatar-diff-cap">Запропоноване</div>' +
+              '<img src="/storage/' + escHtml(req.avatar_path) + '" alt="Нове фото" class="prof-av prof-av--new">' +
+            '</div>' +
+          '</div>';
+      }
+
+      var diffTable = diffRows
+        ? '<table class="prof-diff-table"><tbody>' + diffRows + '</tbody></table>'
+        : (req.avatar_path ? '' : '<p class="text-muted">Немає змін</p>');
+
+      var date = req.created_at ? fmtIsoDate(String(req.created_at).substring(0, 10)) : '';
+
+      return '<div class="prof-req-card" data-id="' + req.id + '">' +
+        '<div class="prof-req-header">' +
+          '<div>' +
+            '<div class="prof-req-name">&#128100; ' + escHtml(fullName) + '</div>' +
+            (u.nickname ? '<div class="prof-req-nick">@' + escHtml(u.nickname) + '</div>' : '') +
+          '</div>' +
+          (date ? '<div class="prof-req-date">&#128197; ' + date + '</div>' : '') +
+        '</div>' +
+        avatarBlock +
+        diffTable +
+        '<div class="pending-card-actions">' +
+          '<button class="btn-publish" data-action="approve" data-id="' + req.id + '">&#10003; Схвалити</button>' +
+          '<button class="btn-reject"  data-action="reject"  data-id="' + req.id + '">&#10005; Відхилити</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function bindProfileReqActions(scope) {
+      scope.querySelectorAll('.prof-req-card .btn-publish, .prof-req-card .btn-reject').forEach(function (btn) {
+        if (btn.dataset.bound) return;
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', function () {
+          var id = parseInt(btn.dataset.id, 10);
+          var action = btn.dataset.action;
+          if (action === 'reject' && !confirm('Відхилити зміни користувача?')) return;
+          btn.disabled = true;
+          var path = '/admin/profile-requests/' + id + '/' + action;
+          apiFetch('POST', path, {}, token)
+            .then(function (res) {
+              if (!res.ok) return res.json().then(function (d) { throw new Error(d.message || 'error'); });
+              return res.json();
+            })
+            .then(function () {
+              showToast(action === 'approve' ? '✓ Зміни схвалено' : 'Зміни відхилено');
+              loadProfileRequests();
+            })
+            .catch(function (err) {
+              showToast(err.message || 'Помилка');
+              btn.disabled = false;
+            });
+        });
+      });
+      scope.querySelectorAll('.prof-av').forEach(function (img) {
+        if (img.dataset.bound || img.tagName !== 'IMG') return;
+        img.dataset.bound = '1';
+        img.style.cursor = 'zoom-in';
+        img.addEventListener('click', function () { openSingleLightbox(img.src, img.alt || ''); });
+      });
+    }
+
+    function renderProfileReqPagination() {
+      var pag = document.getElementById('adminProfilesPagination');
+      if (!pag) return;
+      var remaining = profileReqTotal - profileRequests.length;
+      if (remaining > 0) {
+        pag.innerHTML = '<button class="btn-show-more">+ Показати ще ' + Math.min(remaining, PROFILE_REQ_PER_PAGE) + '</button>';
+        pag.querySelector('.btn-show-more').addEventListener('click', loadMoreProfileReq);
+      } else {
+        pag.innerHTML = '';
+      }
+    }
+
+    function loadProfileRequests() {
+      profileRequests = [];
+      profileReqPage  = 0;
+      profileReqTotal = 0;
+      var list = document.getElementById('adminProfilesList');
+      if (list) list.innerHTML = '<p class="admin-loading">Завантаження...</p>';
+      var pag = document.getElementById('adminProfilesPagination');
+      if (pag) pag.innerHTML = '';
+      loadMoreProfileReq();
+    }
+
+    function loadMoreProfileReq() {
+      var list   = document.getElementById('adminProfilesList');
+      var badge  = document.getElementById('profilesBadge');
+      var tabBtn = document.getElementById('tabProfilesBtn');
+      if (!list) return;
+      var pag = document.getElementById('adminProfilesPagination');
+      if (pag) pag.innerHTML = '<button class="btn-show-more" disabled>Завантаження…</button>';
+
+      apiFetch('GET', '/admin/profile-requests?per_page=' + PROFILE_REQ_PER_PAGE + '&page=' + (profileReqPage + 1), null, token)
+        .then(function (res) {
+          if (!res.ok) throw new Error('http');
+          return res.json();
+        })
+        .then(function (resp) {
+          profileReqPage  = resp.current_page || 1;
+          profileReqTotal = resp.total || 0;
+          var items = resp.data || [];
+          if (badge) badge.textContent = profileReqTotal || '';
+
+          if (!profileRequests.length && !items.length) {
+            list.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128100;</div><p>Немає запитів на зміну профілю</p></div>';
+            if (pag) pag.innerHTML = '';
+            return;
+          }
+
+          if (!profileRequests.length) list.innerHTML = '';
+          profileRequests = profileRequests.concat(items);
+          list.insertAdjacentHTML('beforeend', items.map(profileRequestCardHtml).join(''));
+          bindProfileReqActions(list);
+          renderProfileReqPagination();
+        })
+        .catch(function () {
+          if (tabBtn) tabBtn.style.display = 'none';
+          if (list) list.innerHTML = '<p class="admin-loading">Помилка завантаження</p>';
+          if (pag) pag.innerHTML = '';
+        });
     }
 
 function resetAlbums() {
@@ -2483,6 +2903,15 @@ function resetAlbums() {
     }
 
     loadPendingAlbums();
+
+    // Lightweight count for profiles tab badge (no full data fetch on init)
+    apiFetch('GET', '/admin/profile-requests?per_page=1&page=1', null, token)
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (resp) {
+        var badge = document.getElementById('profilesBadge');
+        if (badge && resp) badge.textContent = resp.total || '';
+      })
+      .catch(function () {});
   }
 
   /* ── PROFILE PAGE ───────────────────────────── */
@@ -2495,12 +2924,17 @@ function resetAlbums() {
     var user  = getCachedUser();
 
     if (!token || !user) {
-      gate.style.display = '';
+      window.location.replace('/auth');
       return;
     }
 
     gate.style.display  = 'none';
     panel.style.display = '';
+
+    /* ensure only the first tab section is visible on load */
+    $$('.profile-tab-section').forEach(function (s) { s.style.display = 'none'; });
+    var firstTab = document.getElementById('ptabInfo');
+    if (firstTab) firstTab.style.display = '';
 
     /* ── tab switching ── */
     $$('[data-ptab]').forEach(function (btn) {
@@ -2550,6 +2984,40 @@ function resetAlbums() {
       var k = document.getElementById('pfPhone');      if (k) k.value = u.phone       || '';
     }
 
+    /* ── pending change banner ── */
+    var P_FIELD_LABELS = {
+      first_name: "Ім'я", last_name: 'Прізвище', patronymic: 'По батькові',
+      street: 'Вулиця', nickname: 'Нікнейм', phone: 'Телефон'
+    };
+
+    function renderPendingBanner(u) {
+      var existing = document.getElementById('profilePendingBanner');
+      if (existing) existing.remove();
+      if (!u.pending_request) return;
+      var keys = Object.keys(u.pending_request.payload || {});
+      var fieldsList = keys.filter(function (k) { return P_FIELD_LABELS[k]; })
+                           .map(function (k) { return P_FIELD_LABELS[k]; }).join(', ');
+      var avatarNote = u.pending_request.avatar_path ? 'фото профілю' : '';
+      var parts = [];
+      if (fieldsList) parts.push(fieldsList);
+      if (avatarNote) parts.push(avatarNote);
+      var listHtml = parts.length
+        ? '<div class="profile-pending-fields">' + escHtml(parts.join(' · ')) + '</div>'
+        : '';
+
+      var bannerHtml =
+        '<div id="profilePendingBanner" class="profile-pending-banner">' +
+          '<div class="profile-pending-icon">&#9203;</div>' +
+          '<div class="profile-pending-body">' +
+            '<div class="profile-pending-title">Зміни чекають модерації</div>' +
+            '<div class="profile-pending-text">Адміністратор перегляне ваші зміни найближчим часом. До цього в профілі видно поточні дані.</div>' +
+            listHtml +
+          '</div>' +
+        '</div>';
+      var panel = document.getElementById('profilePanel');
+      if (panel) panel.insertAdjacentHTML('afterbegin', bannerHtml);
+    }
+
     /* ── load fresh profile from server ── */
     function loadProfile() {
       apiFetch('GET', '/profile', null, token)
@@ -2559,6 +3027,7 @@ function resetAlbums() {
           renderAvatar(u);
           renderNames(u);
           populateForm(u);
+          renderPendingBanner(u);
         })
         .catch(function () { showToast('Помилка завантаження профілю'); });
     }
@@ -2580,7 +3049,10 @@ function resetAlbums() {
             saveSession(u, token);
             renderAvatar(u);
             renderNames(u);
-            showToast('✓ Фото оновлено');
+            renderPendingBanner(u);
+            showToast(u.pending_request && u.pending_request.avatar_path
+              ? 'Фото відправлено на модерацію'
+              : '✓ Фото оновлено');
             avatarInput.value = '';
           })
           .catch(function () { showToast('Помилка завантаження фото'); });
@@ -2611,7 +3083,10 @@ function resetAlbums() {
             saveSession(u, token);
             renderAvatar(u);
             renderNames(u);
-            showToast('✓ Профіль оновлено');
+            renderPendingBanner(u);
+            showToast(u.pending_request && (u.pending_request.payload && Object.keys(u.pending_request.payload).length)
+              ? 'Зміни відправлено на модерацію'
+              : '✓ Профіль оновлено');
           })
           .catch(function (err) {
             var msg = (err && err.errors)
@@ -2694,6 +3169,7 @@ function resetAlbums() {
 
   /* ── DOMContentLoaded ────────────────────────── */
   function init() {
+    initImgErrorFallback();
     initNav();
     initUserArea();
     initActiveLink();
@@ -2709,6 +3185,7 @@ function resetAlbums() {
     initAlbumPage();
     initGalleryPage();
     initIndexArticles();
+    initArticlesListPage();
     initIndexAlbums();
     initShopPage();
     initRequestsPage();
