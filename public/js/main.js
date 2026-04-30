@@ -1750,13 +1750,20 @@
       : escHtml(name);
   }
 
-  function renderProductCard(p, myShopId, sentIds) {
+  function productRequestLockedUntil(p, requestLocks) {
+    var lockedUntil = requestLocks && requestLocks[p.id] ? requestLocks[p.id] : p.viewer_request_locked_until;
+    if (!lockedUntil) return null;
+    var lockedTs = Date.parse(lockedUntil);
+    return !isNaN(lockedTs) && lockedTs > Date.now() ? lockedUntil : null;
+  }
+
+  function renderProductCard(p, myShopId, requestLocks) {
     var cachedUser = getCachedUser() || {};
     var sellerUserId = p.shop && (p.shop.user_id != null ? p.shop.user_id : (p.shop.user && p.shop.user.id));
     var myId = cachedUser.id;
     var isOwn = (myShopId != null && p.shop_id != null && Number(myShopId) === Number(p.shop_id))
               || (myId != null && sellerUserId != null && Number(myId) === Number(sellerUserId));
-    var isSent = sentIds && sentIds.indexOf(p.id) !== -1;
+    var isSent = !!productRequestLockedUntil(p, requestLocks);
     var actionsHtml = '';
     if (isOwn) {
       actionsHtml = '<span class="product-card-own-tag">&#127775; Ваш товар</span>' +
@@ -1795,7 +1802,7 @@
     var loadedProds = [];
     var prodPage    = 0;
     var prodTotal   = 0;
-    var sentIds     = [];
+    var requestLocks = {};
     var pendingBuyProduct = null;
     var PRODS_PER_PAGE = 9;
 
@@ -1867,7 +1874,7 @@
       var pag = document.getElementById('productPagination');
       if (pag) pag.innerHTML = '<button class="btn-show-more" disabled>Завантаження…</button>';
 
-      apiFetch('GET', url)
+      apiFetch('GET', url, null, token)
         .then(function (res) { return res.json(); })
         .then(function (resp) {
           prodPage  = resp.current_page;
@@ -1894,7 +1901,7 @@
 
       var gridCls = filterShopId ? 'product-grid product-grid--wide' : 'product-grid';
       listEl.innerHTML = '<div class="' + gridCls + '">' + loadedProds.map(function (p) {
-        return renderProductCard(p, myShopId, sentIds);
+        return renderProductCard(p, myShopId, requestLocks);
       }).join('') + '</div>';
       initFadeIn();
 
@@ -1968,12 +1975,20 @@
         setSubmitLoading(modalOk, true);
         apiFetch('POST', '/products/' + id + '/buy-request', { message: msg || null }, token)
           .then(function (res) {
-            if (res.status === 422) return res.json().then(function (d) { throw new Error(d.message || 'error'); });
-            if (!res.ok) throw new Error();
+            if (!res.ok) return res.json().then(function (d) {
+              throw new Error(d.message || 'Помилка');
+            }).catch(function (err) {
+              throw new Error(err.message || 'Помилка');
+            });
             return res.json();
           })
-          .then(function () {
-            if (sentIds.indexOf(id) === -1) sentIds.push(id);
+          .then(function (data) {
+            var prod = loadedProds.find(function (p) { return p.id === id; });
+            if (prod) {
+              prod.viewer_can_request = false;
+              prod.viewer_request_locked_until = data.can_request_after || new Date(Date.now() + 86400000).toISOString();
+              requestLocks[id] = prod.viewer_request_locked_until;
+            }
             modal.style.display = 'none';
             renderPage();
             showToast('✓ Запит надіслано! Продавець побачить ваш контакт.');
