@@ -3525,25 +3525,72 @@ function resetAlbums() {
 
     /* ── avatar upload ── */
     var avatarInput = document.getElementById('avatarFileInput');
+    var avatarBtn   = document.querySelector('.profile-avatar-btn');
+    var avatarCircle = document.getElementById('profileAvatarCircle');
+
+    function setAvatarUploading(on, percent) {
+      if (avatarCircle) avatarCircle.classList.toggle('is-uploading', !!on);
+      if (avatarBtn)    avatarBtn.classList.toggle('is-loading', !!on);
+      if (avatarInput)  avatarInput.disabled = !!on;
+
+      var overlay = document.getElementById('profileAvatarOverlay');
+      if (on) {
+        if (!overlay && avatarCircle) {
+          overlay = document.createElement('div');
+          overlay.id = 'profileAvatarOverlay';
+          overlay.className = 'profile-avatar-overlay';
+          overlay.innerHTML = '<div class="profile-avatar-spinner"></div><div class="profile-avatar-progress">0%</div>';
+          avatarCircle.appendChild(overlay);
+        }
+        if (overlay) {
+          var pct = overlay.querySelector('.profile-avatar-progress');
+          if (pct) pct.textContent = (typeof percent === 'number' ? Math.round(percent) : 0) + '%';
+        }
+      } else if (overlay) {
+        overlay.remove();
+      }
+    }
+
+    function uploadAvatarWithProgress(file) {
+      return new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/profile/avatar');
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+
+        xhr.upload.addEventListener('progress', function (e) {
+          if (e.lengthComputable) setAvatarUploading(true, (e.loaded / e.total) * 100);
+        });
+
+        xhr.addEventListener('load', function () {
+          var data = null;
+          try { data = JSON.parse(xhr.responseText); } catch (e) {}
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(data);
+          } else {
+            var msg = data && data.errors
+              ? Object.values(data.errors).flat().join(' ')
+              : (data && data.message ? data.message : 'Помилка завантаження фото');
+            reject(new Error(msg));
+          }
+        });
+        xhr.addEventListener('error', function () { reject(new Error('Помилка мережі')); });
+        xhr.addEventListener('abort', function () { reject(new Error('Завантаження скасовано')); });
+
+        var fd = new FormData();
+        fd.append('avatar', file);
+        xhr.send(fd);
+      });
+    }
+
     if (avatarInput) {
       avatarInput.addEventListener('change', function () {
         var file = avatarInput.files[0];
         if (!file) return;
-        var fd = new FormData();
-        fd.append('avatar', file);
-        showToast('Завантаження...');
-        apiUpload('POST', '/profile/avatar', fd, token)
-          .then(function (r) {
-            return r.json().then(function (data) {
-              if (!r.ok) {
-                var msg = data && data.errors
-                  ? Object.values(data.errors).flat().join(' ')
-                  : (data && data.message ? data.message : 'Помилка завантаження фото');
-                throw new Error(msg);
-              }
-              return data;
-            });
-          })
+
+        setAvatarUploading(true, 0);
+
+        uploadAvatarWithProgress(file)
           .then(function (u) {
             saveSession(u, token);
             renderAvatar(u);
@@ -3554,7 +3601,8 @@ function resetAlbums() {
               : '✓ Фото оновлено');
             avatarInput.value = '';
           })
-          .catch(function (err) { showToast(err.message || 'Помилка завантаження фото'); });
+          .catch(function (err) { showToast(err.message || 'Помилка завантаження фото'); })
+          .finally(function () { setAvatarUploading(false); });
       });
     }
 
