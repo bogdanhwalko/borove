@@ -41,9 +41,14 @@ class UserShopController extends Controller
             'photo'       => 'nullable|image|max:10240',
         ]);
 
+        $user = $request->user();
+        $fallbackName = trim((string) $user->nickname) !== ''
+            ? $user->nickname
+            : 'Моя палатка';
+
         $shop = Shop::firstOrCreate(
-            ['user_id' => $request->user()->id],
-            ['name' => $request->user()->nickname ?? 'Магазин']
+            ['user_id' => $user->id],
+            ['name' => $fallbackName]
         );
 
         $photoPath = null;

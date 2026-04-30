@@ -22,10 +22,10 @@
         <div id="productPagination" class="pagination"></div>
       </section>
 
-      <aside class="content-sidebar" aria-label="Мій магазин">
+      <aside class="content-sidebar" aria-label="Моя палатка">
 
         <button class="form-mobile-toggle" id="shopSidebarToggle" aria-expanded="false" aria-controls="shopSidebarSection">
-          &#128717; Мій магазин
+          &#128717; Моя палатка
         </button>
 
         <div class="add-form-section" id="shopSidebarSection">
@@ -35,7 +35,7 @@
         <div class="widget fade-in" style="margin-top:20px">
           <div class="widget-header">&#128161; Як це працює</div>
           <div class="widget-body" style="font-size:.85rem;line-height:1.6">
-            <p>&#128717; Додайте свій товар у магазин</p>
+            <p>&#128717; Додайте свій товар у палатку</p>
             <p>&#128222; Покупець надсилає запит</p>
             <p>&#128100; Ви отримуєте контакт покупця</p>
             <p>&#129309; Домовляйтесь напряму</p>

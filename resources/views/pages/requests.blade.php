@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Запити на покупку — Борове')
-@section('description', 'Запити на покупку — мій магазин')
+@section('description', 'Запити на покупку — моя палатка')
 
 @section('content')
 

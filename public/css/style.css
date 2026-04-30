@@ -3453,6 +3453,23 @@ ul { list-style: none; }
   box-shadow: var(--sh-xs);
   margin-bottom: 16px;
 }
+.shop-settings { margin-bottom: 16px; }
+.shop-settings > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: .9rem;
+  list-style: none;
+  user-select: none;
+  padding: 4px 0;
+}
+.shop-settings > summary::-webkit-details-marker { display: none; }
+.shop-settings > summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 6px;
+  transition: transform .15s;
+}
+.shop-settings[open] > summary::before { transform: rotate(90deg); }
 .shop-quick-link {
   display: flex;
   align-items: center;

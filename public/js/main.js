@@ -1803,7 +1803,7 @@
       if (sidebarEl) sidebarEl.style.display = 'none';
       var headerEl = document.getElementById('shopHeader');
       if (headerEl) {
-        headerEl.innerHTML = '<div class="shop-header-banner"><div class="empty-icon">&#128717;</div><p>Завантаження магазину...</p></div>';
+        headerEl.innerHTML = '<div class="shop-header-banner"><div class="empty-icon">&#128717;</div><p>Завантаження палатки...</p></div>';
         headerEl.style.display = '';
       }
       apiFetch('GET', '/shops/' + filterShopId)
@@ -1831,7 +1831,7 @@
             '</div>';
         })
         .catch(function () {
-          if (headerEl) headerEl.innerHTML = '<div class="shop-header-banner"><p>Магазин не знайдено. <a href="/shop">&#8592; Назад</a></p></div>';
+          if (headerEl) headerEl.innerHTML = '<div class="shop-header-banner"><p>Палатку не знайдено. <a href="/shop">&#8592; Назад</a></p></div>';
         });
     }
 
@@ -1972,7 +1972,7 @@
         wrap.innerHTML =
           '<div class="form-auth-notice">' +
             '<div class="form-auth-icon">&#128274;</div>' +
-            '<p>Щоб керувати магазином, потрібно <a href="/auth">увійти</a></p>' +
+            '<p>Щоб керувати палаткою, потрібно <a href="/auth">увійти</a></p>' +
           '</div>';
         return;
       }
@@ -1996,9 +1996,9 @@
     function renderShopSidebar(shop, requests) {
       if (!shop) {
         return '<div class="add-form">' +
-          '<h3>&#128717; Створити магазин</h3>' +
+          '<h3>&#128717; Створити палатку</h3>' +
           '<form id="shopCreateForm" novalidate>' +
-            '<div class="form-group"><label for="shopName">Назва магазину *</label>' +
+            '<div class="form-group"><label for="shopName">Назва палатки *</label>' +
               '<input type="text" id="shopName" placeholder="напр. Городина від Марії" required maxlength="200"></div>' +
             '<div class="form-group"><label for="shopDesc">Опис</label>' +
               '<textarea id="shopDesc" placeholder="Що продаєте..." maxlength="500"></textarea></div>' +
@@ -2013,13 +2013,18 @@
         ? allCount + ' запит' + pluralUa(allCount) + (unreadCount ? ' · ' + unreadCount + ' нов' + (unreadCount === 1 ? 'ий' : (unreadCount < 5 ? 'их' : 'их')) : '')
         : 'Поки немає запитів';
 
+      var cachedUser = getCachedUser() || {};
+      var displayName = (shop.name && String(shop.name).trim())
+        || cachedUser.nickname
+        || 'Моя палатка';
+
       var quickLinks =
         '<div class="shop-quick-links">' +
-          '<a href="/shop?shop=' + shop.id + '" class="shop-quick-link shop-quick-link--shop" title="Відкрити мій магазин">' +
+          '<a href="/shop?shop=' + shop.id + '" class="shop-quick-link shop-quick-link--shop" title="Відкрити мою палатку">' +
             '<span class="sql-icon">&#128717;</span>' +
             '<span class="sql-body">' +
-              '<span class="sql-label">Мій магазин</span>' +
-              '<span class="sql-name">' + escHtml(shop.name) + '</span>' +
+              '<span class="sql-label">Моя палатка</span>' +
+              '<span class="sql-name">' + escHtml(displayName) + '</span>' +
             '</span>' +
             '<span class="sql-arrow">&#8594;</span>' +
           '</a>' +
@@ -2034,6 +2039,18 @@
               : '<span class="sql-arrow">&#8594;</span>') +
           '</a>' +
         '</div>';
+
+      var settingsForm =
+        '<details class="add-form shop-settings">' +
+          '<summary>&#9881;&#65039; Налаштування палатки</summary>' +
+          '<form id="shopEditForm" novalidate style="margin-top:12px">' +
+            '<div class="form-group"><label for="shopEditName">Назва *</label>' +
+              '<input type="text" id="shopEditName" required maxlength="200" value="' + escHtml(shop.name || '') + '"></div>' +
+            '<div class="form-group"><label for="shopEditDesc">Опис</label>' +
+              '<textarea id="shopEditDesc" maxlength="500">' + escHtml(shop.description || '') + '</textarea></div>' +
+            '<button type="submit" class="btn-submit">&#128190; Зберегти</button>' +
+          '</form>' +
+        '</details>';
 
       var addForm =
         '<div class="add-form">' +
@@ -2055,7 +2072,7 @@
           '</form>' +
         '</div>';
 
-      return quickLinks + addForm;
+      return quickLinks + settingsForm + addForm;
     }
 
     function bindShopSidebar(shop) {
@@ -2064,7 +2081,7 @@
         createForm.addEventListener('submit', function (e) {
           e.preventDefault();
           var name = document.getElementById('shopName').value.trim();
-          if (!name) { showToast('Введіть назву магазину'); return; }
+          if (!name) { showToast('Введіть назву палатки'); return; }
           var btn = createForm.querySelector('button[type="submit"]');
           setSubmitLoading(btn, true);
           apiFetch('POST', '/my/shop', {
@@ -2072,7 +2089,26 @@
             description: document.getElementById('shopDesc').value.trim() || null,
           }, token)
             .then(function (res) { if (!res.ok) throw new Error(); return res.json(); })
-            .then(function (s) { myShopId = s.id; loadMySidebar(); renderPage(); showToast('✓ Магазин створено!'); })
+            .then(function (s) { myShopId = s.id; loadMySidebar(); renderPage(); showToast('✓ Палатку створено!'); })
+            .catch(function () { showToast('Помилка'); })
+            .finally(function () { setSubmitLoading(btn, false); });
+        });
+      }
+
+      var editForm = document.getElementById('shopEditForm');
+      if (editForm) {
+        editForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var name = document.getElementById('shopEditName').value.trim();
+          if (!name) { showToast('Введіть назву палатки'); return; }
+          var btn = editForm.querySelector('button[type="submit"]');
+          setSubmitLoading(btn, true);
+          apiFetch('POST', '/my/shop', {
+            name: name,
+            description: document.getElementById('shopEditDesc').value.trim() || null,
+          }, token)
+            .then(function (res) { if (!res.ok) throw new Error(); return res.json(); })
+            .then(function () { loadMySidebar(); renderPage(); showToast('✓ Збережено'); })
             .catch(function () { showToast('Помилка'); })
             .finally(function () { setSubmitLoading(btn, false); });
         });
