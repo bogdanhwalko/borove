@@ -1,236 +1,327 @@
-# Інструкція з розгортання на cPanel
+# Розгортання на cPanel
+
+Покрокова інструкція для деплою сайту «Борове» на типовий shared-хостинг із cPanel.
 
 ## Стек
 
-- **Laravel 12** — обслуговує і фронтенд (Blade), і API
-- **PHP 8.2** з Sanctum
-- **MySQL 8.0**
-
-Фронтенд рендериться через Blade-шаблони — єдиний додаток, одне розгортання.
-
----
-
-## Вимоги до хостингу
-
-| Вимога | Як перевірити |
-|---|---|
-| PHP 8.2+ | cPanel → «Вибір версії PHP» |
-| MySQL 8.0+ | cPanel → «Бази даних MySQL» |
-| SSH / Термінал | cPanel → «Термінал» або SSH-доступ |
-| mod_rewrite | зазвичай є за замовчуванням |
+- **Laravel 11/12** (PHP 8.2+) — Blade-шаблони + REST API
+- **MySQL 8.0** (підійде MySQL 5.7+ або MariaDB 10.4+)
+- **Apache + .htaccess** (cPanel зазвичай Apache; nginx-конфіг з `docker/` не використовується)
+- **Sanctum** для токен-автентифікації
 
 ---
 
-## Структура файлів на сервері
+## 0. Що знадобиться
 
-```
-/home/CPANEL_USER/
-│
-├── borove.com.ua/          ← document root (тільки public/ від Laravel)
-│   ├── index.php           ← єдина точка входу
-│   ├── .htaccess
-│   └── storage/            ← символічне посилання (крок 6)
-│
-└── borove_app/             ← весь Laravel (НЕ в borove.com.ua — безпечно)
-    ├── app/
-    ├── resources/views/    ← Blade-шаблони
-    ├── public/             ← css/, js/, img/, images/
-    ├── routes/
-    ├── storage/
-    ├── vendor/
-    ├── .env
-    └── artisan
-```
+- **Доступ до cPanel**: File Manager / FTP, MySQL Databases, PHP Version Selector.
+- **SSH-доступ** *(бажано)* — щоб зручно запускати `composer` і `php artisan`. Якщо немає — є альтернатива (див. п.4).
+- **PHP ≥ 8.2** з розширеннями: `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `json`, `bcmath`, `fileinfo`, `gd` (або `imagick`), `zip`.
+- **Composer** на сервері або локально.
+- **Домен / піддомен**, налаштований у cPanel.
 
 ---
 
-## Крок 1 — Підготовка файлів локально
+## 1. База даних
 
-Переконайтесь що Docker запущений і `backend/` зібрано:
-
-```powershell
-cd "c:\Users\hwalk\OneDrive\Робочий стіл\borove"
-docker compose up -d
-# зачекайте поки app-контейнер стане healthy
-```
-
-Папка `backend/` — це повний Laravel з `vendor/`, views, assets.
+1. У cPanel → **MySQL Databases** (або **MySQL Database Wizard**).
+2. Створіть БД, наприклад `loginuser_borove`.
+3. Створіть користувача з надійним паролем, наприклад `loginuser_borove`.
+4. Додайте користувача до бази з **усіма правами**.
+5. Запам'ятайте: `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`. Хост — зазвичай `localhost`.
 
 ---
 
-## Крок 2 — Завантаження Laravel
+## 2. Версія PHP та ліміти
 
-Підключіться через **FTP/SFTP** (FileZilla) або cPanel → «Файловий менеджер».
+1. **PHP Version Selector** → виберіть **PHP 8.2** (або новіше).
+2. Увімкніть розширення зі списку п.0.
+3. **Options** (PHP INI Editor):
+   - `upload_max_filesize = 25M`
+   - `post_max_size = 200M`
+   - `max_file_uploads = 50`
+   - `memory_limit = 256M`
+   - `max_execution_time = 120`
 
-Створіть папку `borove_app/` поряд з `borove.com.ua/`.
-
-Завантажте вміст `backend/` у `borove_app/`:
-```
-app/
-bootstrap/
-config/
-database/
-resources/
-routes/
-storage/
-vendor/
-artisan
-composer.json
-```
-
-> Папку `backend/public/` не завантажуйте сюди — її вміст піде в `borove.com.ua/` окремо.
+> Якщо немає UI для php.ini — створіть у `public/.user.ini` (див. крок 8) ті самі значення.
 
 ---
 
-## Крок 3 — Завантаження public
+## 3. Структура завантаження
 
-Завантажте вміст `backend/public/` у `borove.com.ua/`:
+Не кладіть **усю** Laravel-папку в `public_html`! Це відкриє `.env`, `vendor/`, `storage/` назовні. Дві стратегії:
+
+### Стратегія A — рекомендована: домен на `public/`
+
+У cPanel → **Domains** (або **Addon Domains** / **Subdomains**) → відредагуйте Document Root і вкажіть `public_html/borove/public`.
+
 ```
-index.php
-.htaccess
-css/
-js/
-img/
-images/
+/home/USER/
+├── borove/                   ← Laravel-додаток (поза публічним)
+│   ├── app/
+│   ├── bootstrap/
+│   ├── config/
+│   ├── database/
+│   ├── resources/
+│   ├── routes/
+│   ├── storage/
+│   ├── vendor/               ← створиться composer-ом
+│   ├── .env
+│   ├── artisan
+│   └── public/               ← це Document Root домену
+│       ├── index.php
+│       ├── .htaccess
+│       ├── css/
+│       └── js/
 ```
 
----
+### Стратегія B — якщо хост не дозволяє змінити Document Root
 
-## Крок 4 — Налаштування `index.php`
+Розділяємо файли: `public/` → `public_html/`, решта → у братський каталог.
 
-Відредагуйте `borove.com.ua/index.php` — змініть шляхи до Laravel:
+```
+/home/USER/
+├── borove-app/               ← Laravel-додаток
+│   ├── app/, bootstrap/, ...
+│   └── (без public/)
+└── public_html/              ← був public/
+    ├── index.php             ← треба підправити (див. нижче)
+    ├── .htaccess
+    ├── css/
+    └── js/
+```
+
+У такому варіанті потрібно відредагувати `public_html/index.php`:
 
 ```php
-<?php
-
-use Illuminate\Http\Request;
-
-define('LARAVEL_START', microtime(true));
-
-if (file_exists($maintenance = __DIR__.'/../borove_app/storage/framework/maintenance.php')) {
-    require $maintenance;
-}
-
-require __DIR__.'/../borove_app/vendor/autoload.php';
-
-$app = require_once __DIR__.'/../borove_app/bootstrap/app.php';
-
-$app->handleRequest(Request::capture());
+require __DIR__.'/../borove-app/vendor/autoload.php';
+$app = require_once __DIR__.'/../borove-app/bootstrap/app.php';
 ```
 
 ---
 
-## Крок 5 — База даних
+## 4. Завантаження коду
 
-cPanel → **«Бази даних MySQL»**:
+**Варіант 1 (через Git):** в SSH:
+```bash
+cd ~
+git clone <ваш репозиторій> borove
+cd borove
+```
 
-1. Створіть базу (наприклад `cpanelusername_borove`)
-2. Створіть користувача з паролем
-3. Надайте **всі привілеї**
+**Варіант 2 (через ZIP):** локально запакуйте папку `backend/` (або скопіюйте `backend-src/`) у zip, через File Manager **Upload** → **Extract**.
+
+**Що саме копіювати:** вміст папки [backend/](backend/) — це і є Laravel-додаток. Папки `backend-src/` (вихідники, що монтуються в Docker) досить як еталона для синхронізації, але деплоїти потрібно фактичну папку `backend/`.
 
 ---
 
-## Крок 6 — Файл `.env`
+## 5. Залежності (Composer)
 
-Створіть `borove_app/.env`:
+З SSH у корені проєкту:
 
-```env
+```bash
+composer install --no-dev --optimize-autoloader
+```
+
+**Без SSH:** виконайте `composer install` локально на своєму ПК і завантажте папку `vendor/` разом із кодом.
+
+---
+
+## 6. Налаштування `.env`
+
+Скопіюйте `.env.example` → `.env` і відредагуйте:
+
+```dotenv
 APP_NAME="Борове"
 APP_ENV=production
-APP_KEY=
+APP_KEY=                       # згенерується далі
 APP_DEBUG=false
-APP_URL=https://borove.com.ua
+APP_URL=https://yourdomain.com
 
 LOG_CHANNEL=stack
-LOG_LEVEL=error
+LOG_LEVEL=warning
 
 DB_CONNECTION=mysql
 DB_HOST=localhost
 DB_PORT=3306
-DB_DATABASE=cpanelusername_borove
-DB_USERNAME=cpanelusername_borove
-DB_PASSWORD=YOUR_DB_PASSWORD
+DB_DATABASE=loginuser_borove
+DB_USERNAME=loginuser_borove
+DB_PASSWORD=ваш_пароль
 
-CACHE_STORE=file
+CACHE_DRIVER=file
 SESSION_DRIVER=file
-SESSION_LIFETIME=120
+QUEUE_CONNECTION=sync
 
-FILESYSTEM_DISK=public
-
-SANCTUM_STATEFUL_DOMAINS=borove.com.ua
-SESSION_DOMAIN=.borove.com.ua
+SANCTUM_STATEFUL_DOMAINS=yourdomain.com
+SESSION_DOMAIN=yourdomain.com
 ```
 
----
-
-## Крок 7 — Термінал (SSH)
-
-cPanel → **«Термінал»**:
-
+Згенеруйте ключ:
 ```bash
-cd ~/borove_app
-
-# Генерація ключа
 php artisan key:generate
-
-# Таблиці БД
-php artisan migrate --force
-
-# Початкові дані
-php artisan db:seed --force
-
-# Права
-chmod -R 775 storage bootstrap/cache
-
-# Символічне посилання для завантажених файлів
-ln -s ~/borove_app/storage/app/public ~/borove.com.ua/storage
 ```
+
+**Без SSH:** згенеруйте локально, скопіюйте значення `APP_KEY` у `.env`.
 
 ---
 
-## Крок 8 — Призначити адміністратора
+## 7. Міграції та кеш
 
 ```bash
-cd ~/borove_app
-php artisan tinker --execute="App\Models\User::where('email', 'YOUR@EMAIL.COM')->update(['is_admin' => 1]);"
+php artisan migrate --force
+php artisan storage:link
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+**Без SSH:** деякі cPanel-хости мають **«Setup PHP Worker»** або кнопку **«Run command»**. Альтернатива — створіть тимчасовий PHP-скрипт у `public/migrate.php`:
+
+```php
+<?php
+require __DIR__.'/../vendor/autoload.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
+$kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
+$kernel->call('migrate', ['--force' => true]);
+$kernel->call('storage:link');
+echo "OK";
+```
+
+Відкрийте `https://yourdomain.com/migrate.php` один раз → побачите `OK` → **видаліть файл!**
+
+---
+
+## 8. `.user.ini` (якщо немає UI для php.ini)
+
+Створіть `public/.user.ini`:
+
+```ini
+upload_max_filesize = 25M
+post_max_size = 200M
+max_file_uploads = 50
+memory_limit = 256M
 ```
 
 ---
 
-## Крок 9 — Перевірка
+## 9. Security headers (заміна nginx-конфігу)
 
-- `https://borove.com.ua` — головна сторінка
-- `https://borove.com.ua/shop` — базар
-- `https://borove.com.ua/api/articles` — JSON
+У `public/.htaccess` додайте на початок (поруч з існуючим `<IfModule mod_rewrite.c>`):
+
+```apache
+<IfModule mod_headers.c>
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://picsum.photos https://*.picsum.photos; connect-src 'self' https://api.open-meteo.com; frame-ancestors 'self';"
+</IfModule>
+```
+
+---
+
+## 10. SSL / HTTPS
+
+У cPanel → **SSL/TLS Status** → **Run AutoSSL** (Let's Encrypt). Або встановіть свій сертифікат вручну.
+
+Після увімкнення SSL — додайте у `.htaccess` редірект:
+
+```apache
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} off
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+```
+
+---
+
+## 11. Права доступу
+
+Через File Manager або SSH:
+```bash
+chmod -R 755 storage bootstrap/cache
+chown -R USER:USER storage bootstrap/cache
+```
+
+(заміни `USER` на ім'я cPanel-юзера)
+
+---
+
+## 12. Створення першого адміна
+
+В phpMyAdmin → таблиця `users` → відредагувати ваш запис → `is_admin = 1`.
+
+Або через SSH:
+```bash
+php artisan tinker
+>>> \App\Models\User::where('phone','0671234567')->update(['is_admin' => 1]);
+```
+
+---
+
+## 13. Перевірка
+
+Відкрийте `https://yourdomain.com`:
+- ✅ Головна завантажилась з шапкою, погодою, списками
+- ✅ `/announcements`, `/rides`, `/gallery`, `/shop` працюють
+- ✅ Реєстрація + логін працюють
+- ✅ Завантаження фото в оголошення/альбоми працює (>2МБ перевірка)
+- ✅ В DevTools немає 404, помилок CSP, PHP-warnings
+
+Якщо щось не так:
+- `storage/logs/laravel.log` — логи Laravel
+- cPanel → **Errors** — Apache error_log
+- `php artisan optimize:clear` — скинути кеш конфігу/виглядів
+
+---
+
+## 14. Оновлення (deploy v2)
+
+```bash
+cd ~/borove
+git pull                                     # або заливаємо нові файли
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan view:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
 
 ---
 
 ## Часті проблеми
 
-| Симптом | Рішення |
+| Симптом | Причина / фікс |
 |---|---|
-| 500 Internal Server Error | `borove_app/storage/logs/laravel.log` |
-| «No application encryption key» | `php artisan key:generate` |
-| Фото не відображаються | Перевірте символічне посилання `borove.com.ua/storage` |
-| «Access denied» до БД | Перевірте `DB_*` у `.env` |
-| Сторінка 404 | Перевірте `.htaccess`, чи увімкнено `mod_rewrite` |
+| **500 Internal Server Error**, на сторінці нічого | Перевір `storage/logs/laravel.log`. Часто — права на `storage/`, чи відсутня `APP_KEY`. |
+| **«No application encryption key has been specified»** | Запусти `php artisan key:generate` і скопіюй у `.env`. |
+| **«The image failed to upload»** | PHP-ліміти: `upload_max_filesize` / `post_max_size` замалі. Див. п.2. |
+| **404 на всіх сторінках, крім головної** | mod_rewrite вимкнений або Document Root не на `public/`. Див. п.3. |
+| **CSS/JS повертають 404** | Document Root неправильний. Перевір, що бачиш `public/index.php`, а не корінь Laravel. |
+| **«Database connection refused»** | Перевір `.env`: `DB_HOST=localhost`, ім'я БД має префікс кешерського юзера. |
+| **Бачу `.env` у браузері** | Document Root показує корінь Laravel замість `public/` — терміново виправляйте! Це уразливість. |
+| **Помилки CSP у консолі** | Заголовок CSP неправильно скопійований у `.htaccess` (з `;` замість одного рядка). Або браузер закешував стару версію — `Ctrl+Shift+R`. |
+| **«storage/photos/...» 404** | Не запущено `php artisan storage:link`. |
 
 ---
 
-## Оновлення
+## Безпека
 
-**Views (шаблони сторінок):**
-Завантажте змінені файли в `borove_app/resources/views/` — зміни активні одразу.
+Перед публікацією перевір:
+- [ ] `APP_DEBUG=false` у проді
+- [ ] `APP_ENV=production`
+- [ ] `.env` **не у public_html** (Стратегія A) або заборонено `<Files .env>`
+- [ ] `composer install --no-dev` (без розробницьких пакетів)
+- [ ] HTTPS увімкнено + redirect
+- [ ] Security headers у `.htaccess`
+- [ ] `is_admin` поставлено лише на доменних адмінів
+- [ ] Резервна копія БД налаштована (cPanel → **Backup**)
 
-**CSS/JS/img:**
-Завантажте в `borove.com.ua/css/`, `borove.com.ua/js/` тощо.
+---
 
-**PHP (контролери, моделі):**
-```bash
-cd ~/borove_app && php artisan config:clear && php artisan cache:clear
-```
+## Що НЕ потрібно деплоїти
 
-**Нові міграції:**
-```bash
-cd ~/borove_app && php artisan migrate --force
-```
+- `docker/` — лише для локальної розробки
+- `backend-src/` — дзеркало для Docker-volume, продакшн працює з папки `backend/`
+- `.git/`, `node_modules/`, `tests/`, `phpunit.xml`, `.editorconfig`
+- Кореневі `*.html`, `partials/` — це залишки старого прототипу, в проді не використовуються

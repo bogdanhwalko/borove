@@ -47,7 +47,7 @@ class AnnouncementController extends Controller
         } else {
             $nameDisplay = $user->nickname ?: 'Користувач';
         }
-        $phone = $user->phone ? '+380' . substr($user->phone, 1) : '';
+        $phone = $this->formatUaPhone($user->phone);
 
         if (!$phone) {
             return response()->json(['message' => 'У вашому профілі не вказано телефон. Заповніть профіль перед створенням оголошення.'], 422);
@@ -69,5 +69,30 @@ class AnnouncementController extends Controller
         ]);
 
         return response()->json($ann, 201);
+    }
+
+    private function formatUaPhone(?string $raw): string
+    {
+        $digits = preg_replace('/\D/', '', $raw ?? '');
+
+        if (strlen($digits) === 12 && str_starts_with($digits, '380')) {
+            $digits = '0' . substr($digits, 3);
+        }
+
+        if (strlen($digits) === 9) {
+            $digits = '0' . $digits;
+        }
+
+        if (strlen($digits) === 10 && str_starts_with($digits, '0')) {
+            return sprintf(
+                '+380 %s %s %s %s',
+                substr($digits, 1, 2),
+                substr($digits, 3, 3),
+                substr($digits, 6, 2),
+                substr($digits, 8, 2)
+            );
+        }
+
+        return $raw ?? '';
     }
 }

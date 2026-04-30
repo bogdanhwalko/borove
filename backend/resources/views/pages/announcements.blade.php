@@ -60,8 +60,12 @@
               </div>
               <div class="ride-profile-info" id="annProfileInfo" style="display:none">
                 <div class="ride-profile-info-row">
-                  <span class="ride-profile-info-label">&#128100; Контакт</span>
-                  <span class="ride-profile-info-value" id="annProfileContact"></span>
+                  <span class="ride-profile-info-label">&#128100; Ім'я</span>
+                  <span class="ride-profile-info-value" id="annProfileName"></span>
+                </div>
+                <div class="ride-profile-info-row">
+                  <span class="ride-profile-info-label">&#128222; Телефон</span>
+                  <span class="ride-profile-info-value" id="annProfilePhone"></span>
                 </div>
                 <div class="ride-profile-info-hint">Контактна інформація береться з вашого профілю</div>
               </div>

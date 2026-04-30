@@ -3278,10 +3278,14 @@ ul { list-style: none; }
   color: var(--muted);
   font-weight: 600;
   font-size: .82rem;
+  flex: 0 0 auto;
 }
 .ride-profile-info-value {
   color: var(--text);
   font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 .ride-profile-info-hint {
   margin-top: 8px;

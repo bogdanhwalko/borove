@@ -160,6 +160,16 @@
     return 'ів';
   }
 
+  function formatUaPhone(raw) {
+    var digits = String(raw || '').replace(/\D/g, '');
+    if (digits.length === 12 && digits.indexOf('380') === 0) digits = '0' + digits.substring(3);
+    if (digits.length === 9) digits = '0' + digits;
+    if (digits.length === 10 && digits[0] === '0') {
+      return '+380 ' + digits.substring(1, 3) + ' ' + digits.substring(3, 6) + ' ' + digits.substring(6, 8) + ' ' + digits.substring(8);
+    }
+    return raw ? String(raw) : '';
+  }
+
   /* ── auth / API ────────────────────────────────── */
   var TOKEN_KEY = 'boroveToken';
   var USER_KEY  = 'boroveUser';
@@ -241,32 +251,44 @@
 
     var formWrap = $('#annFormWrap');
     var user = getCachedUser();
-    if (formWrap && !user) {
+    var token = getToken();
+    var ANN_PER_PAGE = 6;
+    var annPage = 1;
+    var annFilter = 'all';
+    var isAdmin = !!(user && user.is_admin);
+
+    function showAnnAuthNotice() {
+      if (!formWrap) return;
       formWrap.innerHTML =
         '<div class="form-auth-notice">' +
           '<div class="form-auth-icon">&#128274;</div>' +
           '<p>Щоб додати оголошення, потрібно <a href="/auth">увійти</a></p>' +
         '</div>';
-    } else if (formWrap && user) {
+    }
+
+    function renderAnnProfileInfo(profile) {
+      if (!formWrap || !profile) return;
       var infoBox = document.getElementById('annProfileInfo');
-      var contactEl = document.getElementById('annProfileContact');
-      var fullName = [user.last_name, user.first_name].filter(Boolean).join(' ');
+      var nameEl = document.getElementById('annProfileName');
+      var phoneEl = document.getElementById('annProfilePhone');
+      var fullName = [profile.last_name, profile.first_name].filter(Boolean).join(' ');
       var nameDisplay;
       if (fullName) {
-        nameDisplay = user.nickname ? fullName + ' (' + user.nickname + ')' : fullName;
+        nameDisplay = profile.nickname ? fullName + ' (' + profile.nickname + ')' : fullName;
       } else {
-        nameDisplay = user.nickname || 'Користувач';
+        nameDisplay = profile.nickname || 'Користувач';
       }
-      var phoneDisplay = user.phone ? '+380 ' + user.phone.substring(1) : '';
-      var contactText = phoneDisplay ? nameDisplay + ', ' + phoneDisplay : nameDisplay;
-      if (contactEl) contactEl.textContent = contactText;
+      var phoneDisplay = formatUaPhone(profile.phone);
+      if (nameEl) nameEl.textContent = nameDisplay;
+      if (phoneEl) phoneEl.textContent = phoneDisplay || '—';
       if (infoBox)   infoBox.style.display = '';
     }
 
-    var ANN_PER_PAGE = 6;
-    var annPage = 1;
-    var annFilter = 'all';
-    var isAdmin = !!(user && user.is_admin);
+    if (!token) {
+      showAnnAuthNotice();
+    } else if (user) {
+      renderAnnProfileInfo(user);
+    }
 
     function loadPage() {
       var pag = document.getElementById('annPagination');
@@ -317,6 +339,29 @@
         })
         .catch(function () {
           list.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128203;</div><p>Не вдалося завантажити оголошення</p></div>';
+        });
+    }
+
+    if (token) {
+      apiFetch('GET', '/me', null, token)
+        .then(function (res) {
+          if (res.status === 401) throw new Error('auth');
+          if (!res.ok) throw new Error('profile');
+          return res.json();
+        })
+        .then(function (profile) {
+          var wasAdmin = isAdmin;
+          user = profile;
+          isAdmin = !!(user && user.is_admin);
+          saveSession(user, token);
+          renderAnnProfileInfo(user);
+          if (wasAdmin !== isAdmin) loadPage();
+        })
+        .catch(function (err) {
+          if (err.message === 'auth') {
+            clearSession();
+            showAnnAuthNotice();
+          }
         });
     }
 
