@@ -130,6 +130,13 @@
     return 'https://picsum.photos/seed/' + encodeURIComponent(seed) + '/' + w + '/' + h;
   }
 
+  function mediaUrl(path, version) {
+    if (!path) return '';
+    var url = /^https?:\/\//.test(path) ? path : '/media/' + path;
+    if (version) url += (url.indexOf('?') === -1 ? '?' : '&') + 'v=' + encodeURIComponent(version);
+    return url;
+  }
+
   /* CSP-friendly: one global capture-phase error listener instead of inline onerror */
   function initImgErrorFallback() {
     document.addEventListener('error', function (e) {
@@ -1471,8 +1478,9 @@
     if (!user || !token) { clearSession(); user = null; }
     if (user) {
       var display = escHtml(user.nickname || user.first_name || 'Користувач');
-      var avatarHtml = user.avatar_path
-        ? '<img src="/storage/' + user.avatar_path + '" class="nav-avatar" alt="">'
+      var userAvatarPath = user.avatar_path || (user.pending_request && user.pending_request.avatar_path);
+      var avatarHtml = userAvatarPath
+        ? '<img src="' + mediaUrl(userAvatarPath, user.avatar_version || '') + '" class="nav-avatar" alt="">'
         : '<span class="nav-avatar nav-avatar--initials">' + escHtml((user.first_name || user.nickname || '?')[0].toUpperCase()) + '</span>';
       li.innerHTML =
         (user.is_admin ? '<a href="/admin" class="btn-nav-admin" title="Адмінпанель">&#9881;</a>' : '') +
@@ -1483,8 +1491,8 @@
       var menu = document.getElementById('siteMenu');
       var drawerHead = menu ? menu.querySelector('.drawer-head') : null;
       if (menu) {
-        var bigAvatar = user.avatar_path
-          ? '<img src="/storage/' + user.avatar_path + '" class="nav-avatar drawer-avatar" alt="">'
+        var bigAvatar = userAvatarPath
+          ? '<img src="' + mediaUrl(userAvatarPath, user.avatar_version || '') + '" class="nav-avatar drawer-avatar" alt="">'
           : '<span class="nav-avatar nav-avatar--initials drawer-avatar">' + escHtml((user.first_name || user.nickname || '?')[0].toUpperCase()) + '</span>';
         var card = document.createElement('a');
         card.className = 'drawer-user-card';
@@ -2870,14 +2878,14 @@
       var avatarBlock = '';
       if (req.avatar_path) {
         var currentAv = u.avatar_path
-          ? '<img src="/storage/' + escHtml(u.avatar_path) + '" alt="Поточне фото" class="prof-av prof-av--current">'
+          ? '<img src="' + escHtml(mediaUrl(u.avatar_path, u.avatar_version || '')) + '" alt="Поточне фото" class="prof-av prof-av--current">'
           : '<div class="prof-av prof-av--empty">' + escHtml(((u.first_name || u.nickname || '?')[0] || '?').toUpperCase()) + '</div>';
         avatarBlock =
           '<div class="prof-avatar-diff">' +
             '<div class="prof-avatar-diff-col"><div class="prof-avatar-diff-cap">Поточне</div>' + currentAv + '</div>' +
             '<div class="prof-diff-arrow">&#8594;</div>' +
             '<div class="prof-avatar-diff-col"><div class="prof-avatar-diff-cap">Запропоноване</div>' +
-              '<img src="/storage/' + escHtml(req.avatar_path) + '" alt="Нове фото" class="prof-av prof-av--new">' +
+              '<img src="' + escHtml(mediaUrl(req.avatar_path, Date.now())) + '" alt="Нове фото" class="prof-av prof-av--new">' +
             '</div>' +
           '</div>';
       }
@@ -3425,12 +3433,22 @@ function resetAlbums() {
       var initials = document.getElementById('profileAvatarInitials');
       var img      = document.getElementById('profileAvatarImg');
       if (!circle) return;
-      if (u.avatar_path) {
-        img.src = '/storage/' + u.avatar_path;
+      var pendingPath = u.pending_request && u.pending_request.avatar_path;
+      var avatarPath = u.avatar_path || pendingPath;
+      circle.classList.toggle('is-pending', !!(!u.avatar_path && pendingPath));
+      if (avatarPath) {
+        img.onerror = function () {
+          img.style.display = 'none';
+          initials.style.display = '';
+          initials.textContent = ((u.first_name || u.nickname || '?')[0] || '?').toUpperCase();
+          circle.style.background = '';
+        };
+        img.src = mediaUrl(avatarPath, u.avatar_version || Date.now());
         img.style.display = '';
         initials.style.display = 'none';
         circle.style.background = 'transparent';
       } else {
+        img.onerror = null;
         img.style.display = 'none';
         initials.style.display = '';
         initials.textContent = ((u.first_name || u.nickname || '?')[0] || '?').toUpperCase();
@@ -3515,7 +3533,17 @@ function resetAlbums() {
         fd.append('avatar', file);
         showToast('Завантаження...');
         apiUpload('POST', '/profile/avatar', fd, token)
-          .then(function (r) { return r.json(); })
+          .then(function (r) {
+            return r.json().then(function (data) {
+              if (!r.ok) {
+                var msg = data && data.errors
+                  ? Object.values(data.errors).flat().join(' ')
+                  : (data && data.message ? data.message : 'Помилка завантаження фото');
+                throw new Error(msg);
+              }
+              return data;
+            });
+          })
           .then(function (u) {
             saveSession(u, token);
             renderAvatar(u);
@@ -3526,7 +3554,7 @@ function resetAlbums() {
               : '✓ Фото оновлено');
             avatarInput.value = '';
           })
-          .catch(function () { showToast('Помилка завантаження фото'); });
+          .catch(function (err) { showToast(err.message || 'Помилка завантаження фото'); });
       });
     }
 

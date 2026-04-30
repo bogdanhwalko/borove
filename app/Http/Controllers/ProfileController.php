@@ -96,6 +96,11 @@ class ProfileController extends Controller
                 Storage::disk('public')->delete($user->avatar_path);
             }
             $path = $request->file('avatar')->store('avatars', 'public');
+            if (!$path || !Storage::disk('public')->exists($path)) {
+                return response()->json([
+                    'message' => 'Не вдалося зберегти фото. Перевірте права на storage/app/public.',
+                ], 500);
+            }
             $user->update(['avatar_path' => $path]);
 
             ActivityLog::create([
@@ -109,6 +114,11 @@ class ProfileController extends Controller
 
         // Store in pending bucket; will be moved/applied on approval
         $path = $request->file('avatar')->store('avatars-pending', 'public');
+        if (!$path || !Storage::disk('public')->exists($path)) {
+            return response()->json([
+                'message' => 'Не вдалося зберегти фото. Перевірте права на storage/app/public.',
+            ], 500);
+        }
 
         $existing = ProfileChangeRequest::where('user_id', $user->id)
             ->where('status', 'pending')
@@ -180,6 +190,10 @@ class ProfileController extends Controller
             'id', 'last_name', 'first_name', 'patronymic',
             'street', 'nickname', 'phone', 'is_admin', 'avatar_path',
         ]);
+        if ($base['avatar_path'] && !Storage::disk('public')->exists($base['avatar_path'])) {
+            $base['avatar_path'] = null;
+        }
+        $base['avatar_version'] = optional($user->updated_at)->timestamp;
 
         // Attach pending change snapshot if any (so frontend can show indicator)
         if (!$user->is_admin) {
@@ -196,10 +210,15 @@ class ProfileController extends Controller
 
     private function requestPayload(ProfileChangeRequest $req): array
     {
+        $avatarPath = $req->avatar_path;
+        if ($avatarPath && !Storage::disk('public')->exists($avatarPath)) {
+            $avatarPath = null;
+        }
+
         return [
             'id'          => $req->id,
             'payload'     => $req->payload ?? [],
-            'avatar_path' => $req->avatar_path,
+            'avatar_path' => $avatarPath,
             'created_at'  => $req->created_at,
         ];
     }

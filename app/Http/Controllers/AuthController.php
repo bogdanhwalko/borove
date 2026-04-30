@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -35,7 +36,7 @@ class AuthController extends Controller
         $token = $user->createToken('borove-app')->plainTextToken;
 
         return response()->json([
-            'user'  => $user->only(['id', 'last_name', 'first_name', 'patronymic', 'street', 'nickname', 'phone', 'is_admin', 'avatar_path']),
+            'user'  => $this->userPayload($user),
             'token' => $token,
         ], 201);
     }
@@ -64,7 +65,7 @@ class AuthController extends Controller
         $token = $user->createToken('borove-app')->plainTextToken;
 
         return response()->json([
-            'user'  => $user->only(['id', 'last_name', 'first_name', 'patronymic', 'street', 'nickname', 'phone', 'is_admin', 'avatar_path']),
+            'user'  => $this->userPayload($user),
             'token' => $token,
         ]);
     }
@@ -78,8 +79,20 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        return response()->json(
-            $request->user()->only(['id', 'last_name', 'first_name', 'patronymic', 'street', 'nickname', 'phone', 'is_admin', 'avatar_path'])
-        );
+        return response()->json($this->userPayload($request->user()));
+    }
+
+    private function userPayload(User $user): array
+    {
+        $payload = $user->only([
+            'id', 'last_name', 'first_name', 'patronymic',
+            'street', 'nickname', 'phone', 'is_admin', 'avatar_path',
+        ]);
+        if ($payload['avatar_path'] && !Storage::disk('public')->exists($payload['avatar_path'])) {
+            $payload['avatar_path'] = null;
+        }
+        $payload['avatar_version'] = optional($user->updated_at)->timestamp;
+
+        return $payload;
     }
 }
