@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PurchaseRequest extends Model
 {
-    protected $fillable = ['product_id', 'buyer_id', 'message'];
+    protected $fillable = ['product_id', 'buyer_id', 'message', 'viewed_at'];
+
+    protected $casts = ['viewed_at' => 'datetime'];
 
     public function product(): BelongsTo
     {

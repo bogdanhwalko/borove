@@ -89,9 +89,39 @@ class UserShopController extends Controller
                 'product:id,title,photo_path',
                 'buyer:id,nickname,first_name,last_name,phone',
             ])
+            ->orderByRaw('viewed_at IS NULL DESC')
             ->latest()
             ->get();
 
         return response()->json($requests);
+    }
+
+    public function markRequestViewed(Request $request, int $id): JsonResponse
+    {
+        $shop = $request->user()->shop;
+        if (!$shop) abort(403);
+
+        $req = PurchaseRequest::with('product:id,shop_id')->findOrFail($id);
+        if (!$req->product || $req->product->shop_id !== $shop->id) {
+            abort(403);
+        }
+
+        if (!$req->viewed_at) {
+            $req->update(['viewed_at' => now()]);
+        }
+
+        return response()->json(['ok' => true, 'viewed_at' => $req->viewed_at]);
+    }
+
+    public function markAllRequestsViewed(Request $request): JsonResponse
+    {
+        $shop = $request->user()->shop;
+        if (!$shop) return response()->json(['ok' => true, 'updated' => 0]);
+
+        $updated = PurchaseRequest::whereHas('product', fn ($q) => $q->where('shop_id', $shop->id))
+            ->whereNull('viewed_at')
+            ->update(['viewed_at' => now()]);
+
+        return response()->json(['ok' => true, 'updated' => $updated]);
     }
 }

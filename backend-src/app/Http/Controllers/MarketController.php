@@ -53,7 +53,7 @@ class MarketController extends Controller
 
         PurchaseRequest::updateOrCreate(
             ['product_id' => $id, 'buyer_id' => $request->user()->id],
-            ['message' => $request->input('message')]
+            ['message' => $request->input('message'), 'viewed_at' => null]
         );
 
         return response()->json(['ok' => true], 201);

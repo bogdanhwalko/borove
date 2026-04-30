@@ -58,6 +58,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/my/shop/products',          [UserShopController::class, 'storeProduct']);
     Route::delete('/my/shop/products/{id}',   [UserShopController::class, 'destroyProduct']);
     Route::get('/my/shop/requests',           [UserShopController::class, 'requests']);
+    Route::post('/my/shop/requests/view-all', [UserShopController::class, 'markAllRequestsViewed']);
+    Route::post('/my/shop/requests/{id}/view',[UserShopController::class, 'markRequestViewed']);
 });
 
 // User gallery submission (auth)

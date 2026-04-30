@@ -1509,16 +1509,19 @@
   function renderProductCard(p, myShopId, sentIds) {
     var isOwn   = myShopId && p.shop_id === myShopId;
     var isSent  = sentIds && sentIds.indexOf(p.id) !== -1;
-    var buyBtn  = '';
-    if (!isOwn) {
+    var actionsHtml = '';
+    if (isOwn) {
+      actionsHtml = '<span class="product-card-own-tag">&#127775; Ваш товар</span>' +
+        '<button class="btn-product-del" data-id="' + p.id + '" title="Видалити товар">&#128465; Видалити</button>';
+    } else {
       var label = isSent ? '&#10003; Запит надіслано' : '&#128222; Бажаю купити';
-      buyBtn = '<button class="btn-buy' + (isSent ? ' btn-buy--sent' : '') + '" data-id="' + p.id + '" data-title="' + escHtml(p.title) + '"' + (isSent ? ' disabled' : '') + '>' + label + '</button>';
+      actionsHtml = '<button class="btn-buy' + (isSent ? ' btn-buy--sent' : '') + '" data-id="' + p.id + '" data-title="' + escHtml(p.title) + '"' + (isSent ? ' disabled' : '') + '>' + label + '</button>';
     }
     var date = p.created_at ? fmtIsoDate(p.created_at.substring(0, 10)) : '';
     var imgHtml = p.photo_path
       ? '<img class="product-card-img product-card-img--clickable" src="' + photoSrc(p.photo_path) + '" alt="' + escHtml(p.title) + '" loading="lazy" data-src="' + photoSrc(p.photo_path) + '" data-alt="' + escHtml(p.title) + '">'
       : '<div class="product-card-img-placeholder">&#128717;</div>';
-    return '<div class="product-card fade-in">' +
+    return '<div class="product-card fade-in' + (isOwn ? ' product-card--own' : '') + '">' +
       imgHtml +
       '<div class="product-card-body">' +
         '<div class="product-card-title">' + escHtml(p.title) + '</div>' +
@@ -1526,7 +1529,7 @@
         productPriceHtml(p) +
         '<div class="product-card-seller">&#128100; ' + sellerLink(p) + (date ? ' &middot; ' + date : '') + '</div>' +
         (p.purchase_requests_count > 0 ? '<div class="product-card-requests">&#128276; ' + p.purchase_requests_count + ' запит' + pluralUa(p.purchase_requests_count) + '</div>' : '') +
-        '<div class="product-card-actions">' + buyBtn + '</div>' +
+        '<div class="product-card-actions">' + actionsHtml + '</div>' +
       '</div>' +
     '</div>';
   }
@@ -1641,7 +1644,8 @@
         return;
       }
 
-      listEl.innerHTML = '<div class="product-grid">' + loadedProds.map(function (p) {
+      var gridCls = filterShopId ? 'product-grid product-grid--wide' : 'product-grid';
+      listEl.innerHTML = '<div class="' + gridCls + '">' + loadedProds.map(function (p) {
         return renderProductCard(p, myShopId, sentIds);
       }).join('') + '</div>';
       initFadeIn();
@@ -1661,6 +1665,25 @@
           if (modalTitle) modalTitle.textContent = btn.dataset.title;
           if (modalMsg)   modalMsg.value = '';
           if (modal)      modal.style.display = 'flex';
+        });
+      });
+
+      /* delete-own-product buttons */
+      listEl.querySelectorAll('.btn-product-del').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (!confirm('Видалити цей товар? Цю дію не можна скасувати.')) return;
+          var id = parseInt(btn.dataset.id, 10);
+          btn.disabled = true;
+          apiFetch('DELETE', '/my/shop/products/' + id, null, token)
+            .then(function (res) { if (!res.ok) throw new Error(); })
+            .then(function () {
+              loadedProds = loadedProds.filter(function (p) { return p.id !== id; });
+              prodTotal = Math.max(0, prodTotal - 1);
+              renderPage();
+              loadMySidebar();
+              showToast('✓ Товар видалено');
+            })
+            .catch(function () { showToast('Помилка видалення'); btn.disabled = false; });
         });
       });
 
@@ -1727,21 +1750,50 @@
     }
 
     function renderShopSidebar(shop, requests) {
-      var html = '<div class="add-form">';
       if (!shop) {
-        html += '<h3>&#128717; Створити магазин</h3>' +
+        return '<div class="add-form">' +
+          '<h3>&#128717; Створити магазин</h3>' +
           '<form id="shopCreateForm" novalidate>' +
             '<div class="form-group"><label for="shopName">Назва магазину *</label>' +
               '<input type="text" id="shopName" placeholder="напр. Городина від Марії" required maxlength="200"></div>' +
             '<div class="form-group"><label for="shopDesc">Опис</label>' +
               '<textarea id="shopDesc" placeholder="Що продаєте..." maxlength="500"></textarea></div>' +
             '<button type="submit" class="btn-submit">&#128717; Створити</button>' +
-          '</form>';
-      } else {
-        html += '<div class="shop-name-row">' +
-            '<div class="shop-name-title">&#128717; ' + escHtml(shop.name) + '</div>' +
-          '</div>' +
-          '<h3 style="font-size:.9rem;margin-bottom:12px">&#128722; Додати товар</h3>' +
+          '</form>' +
+        '</div>';
+      }
+
+      var allCount    = (requests || []).length;
+      var unreadCount = (requests || []).filter(function (r) { return !r.viewed_at; }).length;
+      var reqSubtitle = allCount
+        ? allCount + ' запит' + pluralUa(allCount) + (unreadCount ? ' · ' + unreadCount + ' нов' + (unreadCount === 1 ? 'ий' : (unreadCount < 5 ? 'их' : 'их')) : '')
+        : 'Поки немає запитів';
+
+      var quickLinks =
+        '<div class="shop-quick-links">' +
+          '<a href="/shop?shop=' + shop.id + '" class="shop-quick-link shop-quick-link--shop" title="Відкрити мій магазин">' +
+            '<span class="sql-icon">&#128717;</span>' +
+            '<span class="sql-body">' +
+              '<span class="sql-label">Мій магазин</span>' +
+              '<span class="sql-name">' + escHtml(shop.name) + '</span>' +
+            '</span>' +
+            '<span class="sql-arrow">&#8594;</span>' +
+          '</a>' +
+          '<a href="/requests" class="shop-quick-link shop-quick-link--requests' + (unreadCount ? ' has-unread' : '') + '">' +
+            '<span class="sql-icon">&#128276;</span>' +
+            '<span class="sql-body">' +
+              '<span class="sql-label">Запити на покупку</span>' +
+              '<span class="sql-name">' + reqSubtitle + '</span>' +
+            '</span>' +
+            (unreadCount
+              ? '<span class="pending-badge sql-badge">' + unreadCount + '</span>'
+              : '<span class="sql-arrow">&#8594;</span>') +
+          '</a>' +
+        '</div>';
+
+      var addForm =
+        '<div class="add-form">' +
+          '<h3 style="font-size:.95rem;margin-bottom:12px">&#128722; Додати товар</h3>' +
           '<form id="productAddForm" novalidate>' +
             '<div class="form-group"><label for="prodTitle">Назва *</label>' +
               '<input type="text" id="prodTitle" placeholder="Назва товару" required maxlength="200"></div>' +
@@ -1756,18 +1808,10 @@
               '</label>' +
               '<input type="file" id="prodPhoto" accept="image/*" class="file-upload-input"></div>' +
             '<button type="submit" class="btn-submit">&#128722; Додати товар</button>' +
-          '</form>';
-
-        /* buy requests link */
-        html += '<div class="shop-requests-link-wrap">' +
-          '<a href="/requests" class="btn-requests-link">' +
-            '&#128276; Запити на покупку' +
-            (requests && requests.length ? ' <span class="pending-badge">' + requests.length + '</span>' : '') +
-          '</a>' +
+          '</form>' +
         '</div>';
-      }
-      html += '</div>';
-      return html;
+
+      return quickLinks + addForm;
     }
 
     function bindShopSidebar(shop) {
@@ -1879,49 +1923,110 @@
 
     wrap.innerHTML = '<p class="admin-loading">Завантаження...</p>';
 
+    function requestCardHtml(r) {
+      var buyer    = r.buyer || {};
+      var prod     = r.product || {};
+      var name     = buyer.nickname || buyer.first_name || 'Покупець';
+      var phone    = buyer.phone
+        ? (String(buyer.phone).startsWith('0') ? '+38' + buyer.phone : '+380' + buyer.phone)
+        : null;
+      var date     = r.created_at ? fmtIsoDate(r.created_at.substring(0, 10)) : '';
+      var prodThumb = prod.photo_path
+        ? '<img class="request-card-thumb" src="' + photoSrc(prod.photo_path) + '" alt="' + escHtml(prod.title || '') + '" loading="lazy">'
+        : '<div class="request-card-thumb request-card-thumb--empty">&#128717;</div>';
+      var unread = !r.viewed_at;
+      var badge = unread
+        ? '<span class="request-unread-badge">&#9679; Новий</span>'
+        : '<span class="request-viewed-badge">&#10003; Переглянуто</span>';
+      var actionBtn = unread
+        ? '<button class="btn-mark-viewed" data-id="' + r.id + '">&#10003; Позначити як переглянуто</button>'
+        : '';
+      return '<div class="request-card' + (unread ? ' request-card--unread' : '') + '" data-id="' + r.id + '">' +
+        '<div class="request-card-status">' + badge + '</div>' +
+        '<div class="request-card-product-row">' +
+          prodThumb +
+          '<div class="request-card-product-info">' +
+            '<div class="request-card-product-title">' + escHtml(prod.title || '—') + '</div>' +
+            (date ? '<div class="request-card-date">&#128197; ' + date + '</div>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="request-card-buyer">&#128100; ' + escHtml(name) + '</div>' +
+        (phone ? '<div class="request-card-phone"><a href="tel:' + escHtml(phone) + '">&#128222; ' + escHtml(phone) + '</a></div>' : '') +
+        (r.message ? '<div class="request-card-msg">&#128172; &laquo;' + escHtml(r.message) + '&raquo;</div>' : '') +
+        (actionBtn ? '<div class="request-card-actions">' + actionBtn + '</div>' : '') +
+      '</div>';
+    }
+
+    function bindRequestActions(scope, requests) {
+      scope.querySelectorAll('.btn-mark-viewed').forEach(function (btn) {
+        if (btn.dataset.bound) return;
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', function () {
+          var id = parseInt(btn.dataset.id, 10);
+          btn.disabled = true;
+          apiFetch('POST', '/my/shop/requests/' + id + '/view', {}, token)
+            .then(function (res) { if (!res.ok) throw new Error(); return res.json(); })
+            .then(function () {
+              var r = requests.find(function (x) { return x.id === id; });
+              if (r) r.viewed_at = new Date().toISOString();
+              renderList();
+              showToast('✓ Позначено як переглянуто');
+            })
+            .catch(function () { showToast('Помилка'); btn.disabled = false; });
+        });
+      });
+      var btnAll = document.getElementById('btnMarkAllViewed');
+      if (btnAll && !btnAll.dataset.bound) {
+        btnAll.dataset.bound = '1';
+        btnAll.addEventListener('click', function () {
+          btnAll.disabled = true;
+          apiFetch('POST', '/my/shop/requests/view-all', {}, token)
+            .then(function (res) { if (!res.ok) throw new Error(); return res.json(); })
+            .then(function () {
+              requests.forEach(function (r) { if (!r.viewed_at) r.viewed_at = new Date().toISOString(); });
+              renderList();
+              showToast('✓ Усі позначено як переглянуті');
+            })
+            .catch(function () { showToast('Помилка'); btnAll.disabled = false; });
+        });
+      }
+    }
+
+    var loadedRequests = [];
+
+    function renderList() {
+      var unreadCount = loadedRequests.filter(function (r) { return !r.viewed_at; }).length;
+      var countEl = document.getElementById('requestsCount');
+      if (countEl) {
+        countEl.textContent = loadedRequests.length
+          ? loadedRequests.length + ' запит' + pluralUa(loadedRequests.length) +
+            (unreadCount ? ' · ' + unreadCount + ' нов' + (unreadCount === 1 ? 'ий' : (unreadCount < 5 ? 'их' : 'их')) : '')
+          : 'Немає запитів';
+      }
+
+      if (!loadedRequests.length) {
+        wrap.innerHTML =
+          '<div class="empty-state">' +
+            '<div class="empty-icon">&#128276;</div>' +
+            '<p>Запитів на покупку поки немає</p>' +
+            '<p style="font-size:.85rem;color:var(--muted)">Коли покупець натисне «Бажаю купити», ви побачите його контакт тут</p>' +
+          '</div>';
+        return;
+      }
+
+      var toolbar = unreadCount
+        ? '<div class="requests-toolbar"><button id="btnMarkAllViewed" class="btn-mark-all">&#10003; Позначити всі як переглянуті</button></div>'
+        : '';
+      wrap.innerHTML = toolbar + loadedRequests.map(requestCardHtml).join('');
+      bindRequestActions(wrap, loadedRequests);
+      initFadeIn();
+    }
+
     apiFetch('GET', '/my/shop/requests', null, token)
       .then(function (res) { return res.json(); })
       .then(function (requests) {
-        var countEl = document.getElementById('requestsCount');
-        if (countEl) countEl.textContent = requests.length
-          ? requests.length + ' запит' + pluralUa(requests.length)
-          : 'Немає запитів';
-
-        if (!requests.length) {
-          wrap.innerHTML =
-            '<div class="empty-state">' +
-              '<div class="empty-icon">&#128276;</div>' +
-              '<p>Запитів на покупку поки немає</p>' +
-              '<p style="font-size:.85rem;color:var(--muted)">Коли покупець натисне «Бажаю купити», ви побачите його контакт тут</p>' +
-            '</div>';
-          return;
-        }
-
-        wrap.innerHTML = requests.map(function (r) {
-          var buyer    = r.buyer || {};
-          var prod     = r.product || {};
-          var name     = buyer.nickname || buyer.first_name || 'Покупець';
-          var phone    = buyer.phone
-            ? (String(buyer.phone).startsWith('0') ? '+38' + buyer.phone : '+380' + buyer.phone)
-            : null;
-          var date     = r.created_at ? fmtIsoDate(r.created_at.substring(0, 10)) : '';
-          var prodThumb = prod.photo_path
-            ? '<img class="request-card-thumb" src="' + photoSrc(prod.photo_path) + '" alt="' + escHtml(prod.title || '') + '" loading="lazy">'
-            : '<div class="request-card-thumb request-card-thumb--empty">&#128717;</div>';
-          return '<div class="request-card">' +
-            '<div class="request-card-product-row">' +
-              prodThumb +
-              '<div class="request-card-product-info">' +
-                '<div class="request-card-product-title">' + escHtml(prod.title || '—') + '</div>' +
-                (date ? '<div class="request-card-date">&#128197; ' + date + '</div>' : '') +
-              '</div>' +
-            '</div>' +
-            '<div class="request-card-buyer">&#128100; ' + escHtml(name) + '</div>' +
-            (phone ? '<div class="request-card-phone"><a href="tel:' + escHtml(phone) + '">&#128222; ' + escHtml(phone) + '</a></div>' : '') +
-            (r.message ? '<div class="request-card-msg">&#128172; &laquo;' + escHtml(r.message) + '&raquo;</div>' : '') +
-          '</div>';
-        }).join('');
-        initFadeIn();
+        loadedRequests = requests || [];
+        renderList();
       })
       .catch(function () {
         wrap.innerHTML = '<div class="empty-state"><p>Помилка завантаження</p></div>';
