@@ -1751,8 +1751,11 @@
   }
 
   function renderProductCard(p, myShopId, sentIds) {
-    var isOwn   = myShopId && p.shop_id === myShopId;
-    var isSent  = sentIds && sentIds.indexOf(p.id) !== -1;
+    var cachedUser = getCachedUser() || {};
+    var sellerUserId = p.shop && (p.shop.user_id || (p.shop.user && p.shop.user.id));
+    var isOwn = (myShopId && p.shop_id === myShopId)
+              || (cachedUser.id && sellerUserId && cachedUser.id === sellerUserId);
+    var isSent = sentIds && sentIds.indexOf(p.id) !== -1;
     var actionsHtml = '';
     if (isOwn) {
       actionsHtml = '<span class="product-card-own-tag">&#127775; Ваш товар</span>' +
