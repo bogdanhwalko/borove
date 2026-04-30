@@ -1,48 +1,45 @@
-# ── OS / Editor ───────────────────────────────────────────
+# ── Laravel ───────────────────────────────────────────────
+*.log
 .DS_Store
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+Homestead.json
+Homestead.yaml
+
+# ── User uploads (kept on server, not in repo) ────────────
+/storage/app/public/avatars/
+/storage/app/public/photos/
+/storage/app/public/announcements/
+/storage/app/public/articles/
+/storage/app/public/products/
+/storage/app/public/avatars-pending/
+
+# ── OS / Editor ───────────────────────────────────────────
 Thumbs.db
 desktop.ini
-.vscode/
-.idea/
 *.sublime-workspace
+.claude
 
-# ── Docker runtime (live copy, regenerated from backend-src) ──
-backend/vendor/
-backend/storage/logs/*.log
-backend/storage/framework/cache/
-backend/storage/framework/sessions/
-backend/storage/framework/views/
-backend/public/storage
-backend/public/hot
-backend/.env
-backend/.phpunit.result.cache
-backend/.phpunit.cache/
-
-# ── Uploaded user files (served via Docker volume) ────────
-backend/storage/app/public/avatars/
-backend/storage/app/public/photos/
-backend/storage/app/public/announcements/
-
-# ── Laravel backend-src secrets ───────────────────────────
-backend-src/.env
-backend-src/.env.*
-backend-src/vendor/
-backend-src/storage/logs/*.log
-backend-src/storage/framework/cache/
-backend-src/storage/framework/sessions/
-backend-src/storage/framework/views/
-backend-src/.phpunit.result.cache
-backend-src/.phpunit.cache/
-
-# ── Node / build tools ────────────────────────────────────
-node_modules/
-npm-debug.log*
-
-# ── Local images downloaded at dev time ───────────────────
-img/header-village.jpg
+# ── Docker dev marker ─────────────────────────────────────
+.bootstrap-complete
 
 # ── Misc ──────────────────────────────────────────────────
-*.log
 *.bak
 *.tmp
-.claude

@@ -52,7 +52,7 @@
 
 ### Стратегія A — рекомендована: домен на `public/`
 
-У cPanel → **Domains** (або **Addon Domains** / **Subdomains**) → відредагуйте Document Root і вкажіть `public_html/borove/public`.
+У cPanel → **Domains** (або **Addon Domains** / **Subdomains**) → відредагуйте Document Root і вкажіть `borove.com.ua/public`.
 
 ```
 /home/USER/
@@ -110,7 +110,7 @@ cd borove
 
 **Варіант 2 (через ZIP):** локально запакуйте папку `backend/` (або скопіюйте `backend-src/`) у zip, через File Manager **Upload** → **Extract**.
 
-**Що саме копіювати:** вміст папки [backend/](backend/) — це і є Laravel-додаток. Папки `backend-src/` (вихідники, що монтуються в Docker) досить як еталона для синхронізації, але деплоїти потрібно фактичну папку `backend/`.
+**Що копіювати:** весь репозиторій — він і є Laravel-додатком. Достатньо клонувати в потрібну папку. На сервері не потрібні: `docker/`, `docker-compose.yml`, `.git/`, `node_modules/`, `tests/`, `phpunit.xml`.
 
 ---
 
@@ -321,7 +321,6 @@ php artisan view:cache
 
 ## Що НЕ потрібно деплоїти
 
-- `docker/` — лише для локальної розробки
-- `backend-src/` — дзеркало для Docker-volume, продакшн працює з папки `backend/`
-- `.git/`, `node_modules/`, `tests/`, `phpunit.xml`, `.editorconfig`
-- Кореневі `*.html`, `partials/` — це залишки старого прототипу, в проді не використовуються
+- `docker/`, `docker-compose.yml` — лише для локальної розробки
+- `.git/`, `node_modules/`, `tests/`, `phpunit.xml`
+- `.bootstrap-complete` — маркер Docker-init

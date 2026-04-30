@@ -6,14 +6,7 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
     volumes:
-      - ./backend:/var/www/html
-      - ./backend-src:/backend-src:ro
-      # Live edit views and assets during development
-      - ./backend-src/resources/views:/var/www/html/resources/views:ro
-      - ./css:/var/www/html/public/css:ro
-      - ./js:/var/www/html/public/js:ro
-      - ./img:/var/www/html/public/img:ro
-      - ./images:/var/www/html/public/images:ro
+      - .:/var/www/html
     depends_on:
       db:
         condition: service_healthy
@@ -32,12 +25,8 @@ services:
     ports:
       - "8000:80"
     volumes:
-      - ./backend:/var/www/html:ro
+      - .:/var/www/html:ro
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./css:/var/www/html/public/css:ro
-      - ./js:/var/www/html/public/js:ro
-      - ./img:/var/www/html/public/img:ro
-      - ./images:/var/www/html/public/images:ro
     depends_on:
       app:
         condition: service_healthy
