@@ -58,9 +58,12 @@
                 <label for="annBody">Текст *</label>
                 <textarea id="annBody" name="annBody" placeholder="Детальний опис..." required maxlength="800"></textarea>
               </div>
-              <div class="form-group">
-                <label for="annContact">Контактна інформація</label>
-                <input type="text" id="annContact" name="annContact" placeholder="Телефон або ім'я" maxlength="100">
+              <div class="ride-profile-info" id="annProfileInfo" style="display:none">
+                <div class="ride-profile-info-row">
+                  <span class="ride-profile-info-label">&#128100; Контакт</span>
+                  <span class="ride-profile-info-value" id="annProfileContact"></span>
+                </div>
+                <div class="ride-profile-info-hint">Контактна інформація береться з вашого профілю</div>
               </div>
               <div class="form-group">
                 <label>Фото (необов'язково)</label>

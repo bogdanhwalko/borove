@@ -31,12 +31,29 @@ class AnnouncementController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'type'    => 'required|in:urgent,event,info,services',
-            'title'   => 'required|string|max:255',
-            'body'    => 'required|string',
-            'contact' => 'nullable|string|max:255',
-            'image'   => 'nullable|image|max:10240',
+            'type'  => 'required|in:urgent,event,info,services',
+            'title' => 'required|string|max:255',
+            'body'  => 'required|string',
+            'image' => 'nullable|image|max:10240',
         ]);
+
+        $user = $request->user();
+
+        // Derive contact from authenticated user's profile (not user-editable)
+        // Format: "Прізвище Ім'я (нікнейм), +380XXXXXXXXX"
+        $fullName = trim(($user->last_name ?? '') . ' ' . ($user->first_name ?? ''));
+        if ($fullName !== '') {
+            $nameDisplay = $user->nickname ? $fullName . ' (' . $user->nickname . ')' : $fullName;
+        } else {
+            $nameDisplay = $user->nickname ?: 'Користувач';
+        }
+        $phone = $user->phone ? '+380' . substr($user->phone, 1) : '';
+
+        if (!$phone) {
+            return response()->json(['message' => 'У вашому профілі не вказано телефон. Заповніть профіль перед створенням оголошення.'], 422);
+        }
+
+        $contact = $nameDisplay . ', ' . $phone;
 
         $imagePath = null;
         if ($request->hasFile('image')) {
@@ -47,7 +64,7 @@ class AnnouncementController extends Controller
             'type'       => $request->input('type'),
             'title'      => $request->input('title'),
             'body'       => $request->input('body'),
-            'contact'    => $request->input('contact'),
+            'contact'    => $contact,
             'image_path' => $imagePath,
         ]);
 

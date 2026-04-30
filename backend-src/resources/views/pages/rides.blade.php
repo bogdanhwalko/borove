@@ -16,6 +16,10 @@
 
       <section class="rides-list" aria-label="Список попуток">
         <h2 class="section-title fade-in"><span class="icon">&#128205;</span> Актуальні поїздки</h2>
+        <div class="rides-filters fade-in" role="group" aria-label="Фільтр поїздок">
+          <button class="filter-btn active" data-rides-filter="all">&#128209; Усі</button>
+          <button class="filter-btn" data-rides-filter="own" id="ridesFilterOwn" style="display:none">&#127775; Мої поїздки</button>
+        </div>
         <div id="ridesList" aria-live="polite">
           <div class="empty-state"><div class="empty-icon">&#128664;</div><p>Завантаження...</p></div>
         </div>
@@ -32,9 +36,16 @@
           <div class="add-form fade-in" id="rideFormWrap">
             <h3>&#128664; Пропоную попутку</h3>
             <form id="addRideForm" novalidate>
-              <div class="form-group">
-                <label for="rideName">Ваше ім'я *</label>
-                <input type="text" id="rideName" name="rideName" placeholder="Василь" required maxlength="60">
+              <div class="ride-profile-info" id="rideProfileInfo" style="display:none">
+                <div class="ride-profile-info-row">
+                  <span class="ride-profile-info-label">&#128100; Ім'я</span>
+                  <span class="ride-profile-info-value" id="rideProfileName"></span>
+                </div>
+                <div class="ride-profile-info-row">
+                  <span class="ride-profile-info-label">&#128222; Телефон</span>
+                  <span class="ride-profile-info-value" id="rideProfilePhone"></span>
+                </div>
+                <div class="ride-profile-info-hint">Ці дані беруться з вашого профілю — щоб змінити, відредагуйте профіль</div>
               </div>
               <div class="form-row">
                 <div class="form-group">
@@ -69,10 +80,6 @@
               <div class="form-group">
                 <label for="rideComment">Коментар</label>
                 <textarea id="rideComment" name="rideComment" placeholder="Маршрут, зупинки, умови..." maxlength="300" style="min-height:80px"></textarea>
-              </div>
-              <div class="form-group">
-                <label for="rideContact">Телефон для зв'язку *</label>
-                <input type="text" id="rideContact" name="rideContact" placeholder="(067) 000-00-00" required maxlength="80">
               </div>
               <button type="submit" class="btn-submit">&#128228; Додати попутку</button>
             </form>

@@ -41,6 +41,7 @@ Route::middleware(['auth:sanctum', 'throttle:20,60'])->post('/announcements', [A
 // Rides (read public, write auth)
 Route::get('/rides', [RideController::class, 'index']);
 Route::middleware(['auth:sanctum', 'throttle:20,60'])->post('/rides', [RideController::class, 'store']);
+Route::middleware('auth:sanctum')->patch('/rides/{id}/seats', [RideController::class, 'updateSeats']);
 
 // Albums (public)
 Route::get('/albums',        [AlbumController::class, 'index']);

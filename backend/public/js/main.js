@@ -248,12 +248,19 @@
           '<p>Щоб додати оголошення, потрібно <a href="/auth">увійти</a></p>' +
         '</div>';
     } else if (formWrap && user) {
-      var contactEl = $('#annContact');
-      if (contactEl && !contactEl.value) {
-        var name = user.nickname || user.first_name || '';
-        var phone = user.phone ? '+380' + user.phone.substring(1) : '';
-        contactEl.value = name + (name && phone ? ', ' : '') + phone;
+      var infoBox = document.getElementById('annProfileInfo');
+      var contactEl = document.getElementById('annProfileContact');
+      var fullName = [user.last_name, user.first_name].filter(Boolean).join(' ');
+      var nameDisplay;
+      if (fullName) {
+        nameDisplay = user.nickname ? fullName + ' (' + user.nickname + ')' : fullName;
+      } else {
+        nameDisplay = user.nickname || 'Користувач';
       }
+      var phoneDisplay = user.phone ? '+380 ' + user.phone.substring(1) : '';
+      var contactText = phoneDisplay ? nameDisplay + ', ' + phoneDisplay : nameDisplay;
+      if (contactEl) contactEl.textContent = contactText;
+      if (infoBox)   infoBox.style.display = '';
     }
 
     var ANN_PER_PAGE = 6;
@@ -347,12 +354,16 @@
         var title   = $('#annTitle').value.trim();
         var body    = $('#annBody').value.trim();
         var type    = $('#annType').value;
-        var contact = $('#annContact').value.trim();
         if (!title) { showToast('Вкажіть заголовок оголошення'); return; }
         if (!body)  { showToast('Введіть текст оголошення'); return; }
 
         var token = getToken();
         if (!token) { showToast('Увійдіть, щоб додати оголошення'); return; }
+        var currentUser = getCachedUser();
+        if (!currentUser || !currentUser.phone) {
+          showToast('Заповніть телефон у профілі перед створенням оголошення');
+          return;
+        }
 
         var btn = form.querySelector('button[type="submit"]');
         setSubmitLoading(btn, true);
@@ -361,7 +372,6 @@
         fd.append('type',  type);
         fd.append('title', title);
         fd.append('body',  body);
-        if (contact) fd.append('contact', contact);
         var imgInput = document.getElementById('annImage');
         if (imgInput && imgInput.files[0]) fd.append('image', imgInput.files[0]);
 
@@ -405,14 +415,28 @@
     return '<span class="ride-badge">' + seats + ' місця</span>';
   }
 
-  function renderRideCard(r, isAdmin) {
+  function renderRideCard(r, isAdmin, myUserId) {
     var comment = r.comment ? '<div class="ride-card-comment">&#8220;' + escHtml(r.comment) + '&#8221;</div>' : '';
     var date = r.ride_date ? fmtIsoDate(r.ride_date) : '';
     var time = r.ride_time ? fmtIsoTime(r.ride_time) : '';
+    var isOwn = myUserId && r.user_id === myUserId;
     var delBtn = isAdmin
       ? '<button class="card-admin-del" data-id="' + r.id + '" title="Видалити">&#128465;</button>'
       : '';
-    return '<div class="ride-card">' +
+
+    var ownerActions = '';
+    if (isOwn) {
+      var fullBtn = r.seats > 0
+        ? '<button type="button" class="btn-ride-full" data-id="' + r.id + '">&#128683; Місць немає</button>'
+        : '';
+      ownerActions =
+        '<div class="ride-card-owner-actions">' +
+          '<span class="ride-card-own-tag">&#127775; Ваша поїздка</span>' +
+          fullBtn +
+        '</div>';
+    }
+
+    return '<div class="ride-card' + (isOwn ? ' ride-card--own' : '') + '">' +
       '<div class="ride-card-icon">&#128664;</div>' +
       '<div class="ride-card-body">' +
         '<div class="ride-card-top">' +
@@ -427,6 +451,7 @@
         '</div>' +
         comment +
         '<div class="ride-card-contact">&#128222; ' + escHtml(r.contact) + '</div>' +
+        ownerActions +
       '</div>' +
     '</div>';
   }
@@ -453,36 +478,86 @@
           '<p>Щоб додати попутку, потрібно <a href="/auth">увійти</a></p>' +
         '</div>';
     } else if (formWrap && user) {
-      var nameEl = $('#rideName');
-      if (nameEl && !nameEl.value) {
-        nameEl.value = user.nickname || user.first_name || '';
+      var infoBox = document.getElementById('rideProfileInfo');
+      var nameEl  = document.getElementById('rideProfileName');
+      var phoneEl = document.getElementById('rideProfilePhone');
+      var fullName = [user.last_name, user.first_name].filter(Boolean).join(' ');
+      var displayName;
+      if (fullName) {
+        displayName = user.nickname ? fullName + ' (' + user.nickname + ')' : fullName;
+      } else {
+        displayName = user.nickname || 'Користувач';
       }
-      var contactEl = $('#rideContact');
-      if (contactEl && !contactEl.value && user.phone) {
-        contactEl.value = '+380' + user.phone.substring(1);
-      }
+      var phoneDisplay = user.phone ? '+380 ' + user.phone.substring(1) : '—';
+      if (nameEl)  nameEl.textContent  = displayName;
+      if (phoneEl) phoneEl.textContent = phoneDisplay;
+      if (infoBox) infoBox.style.display = '';
     }
 
     var RIDES_PER_PAGE = 5;
     var ridesPage = 1;
     var allRides = [];
+    var ridesFilter = 'all';
     var isAdminRides = !!(user && user.is_admin);
+    var myUserId = user ? user.id : null;
+
+    // Show "Мої поїздки" filter only for logged-in users
+    var ownFilterBtn = document.getElementById('ridesFilterOwn');
+    if (ownFilterBtn && myUserId) ownFilterBtn.style.display = '';
+
+    $$('.rides-filters .filter-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        $$('.rides-filters .filter-btn').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        ridesFilter = btn.dataset.ridesFilter;
+        ridesPage = 1;
+        renderPage();
+      });
+    });
+
+    function getVisibleRides() {
+      if (ridesFilter === 'own' && myUserId) {
+        return allRides.filter(function (r) { return r.user_id === myUserId; });
+      }
+      return allRides;
+    }
+
+    function applySeatsUpdate(rideId, newSeats) {
+      var token = getToken();
+      if (!token) { showToast('Сесія закінчилась — увійдіть знову'); return; }
+      apiFetch('PATCH', '/rides/' + rideId + '/seats', { seats: newSeats }, token)
+        .then(function (res) {
+          if (!res.ok) return res.json().then(function (d) { throw new Error(d.message || 'error'); });
+          return res.json();
+        })
+        .then(function (updated) {
+          var idx = allRides.findIndex(function (r) { return r.id === rideId; });
+          if (idx >= 0) allRides[idx].seats = updated.seats;
+          renderPage();
+          showToast(newSeats === 0 ? 'Поїздку позначено як заповнену' : '✓ Кількість місць оновлено');
+        })
+        .catch(function () { showToast('Помилка оновлення'); });
+    }
 
     function renderPage() {
-      var total = allRides.length;
+      var visible = getVisibleRides();
+      var total = visible.length;
       var pages = Math.max(1, Math.ceil(total / RIDES_PER_PAGE));
       if (ridesPage > pages) ridesPage = pages;
 
       var pag = document.getElementById('ridesPagination');
 
       if (!total) {
-        list.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128664;</div><p>Попуток ще немає</p></div>';
+        var emptyMsg = ridesFilter === 'own'
+          ? 'У вас ще немає поїздок'
+          : 'Попуток ще немає';
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128664;</div><p>' + emptyMsg + '</p></div>';
         if (pag) pag.innerHTML = '';
         return;
       }
 
-      list.innerHTML = allRides.slice((ridesPage - 1) * RIDES_PER_PAGE, ridesPage * RIDES_PER_PAGE)
-        .map(function (r) { return renderRideCard(r, isAdminRides); }).join('');
+      list.innerHTML = visible.slice((ridesPage - 1) * RIDES_PER_PAGE, ridesPage * RIDES_PER_PAGE)
+        .map(function (r) { return renderRideCard(r, isAdminRides, myUserId); }).join('');
 
       if (isAdminRides) {
         list.querySelectorAll('.card-admin-del').forEach(function (btn) {
@@ -499,6 +574,16 @@
           });
         });
       }
+
+      // Owner action: "no seats" button
+      list.querySelectorAll('.btn-ride-full').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (!confirm('Позначити цю поїздку як заповнену (місць немає)?')) return;
+          var id = parseInt(btn.dataset.id, 10);
+          btn.disabled = true;
+          applySeatsUpdate(id, 0);
+        });
+      });
 
       if (!pag) return;
       if (pages <= 1) { pag.innerHTML = ''; return; }
@@ -535,18 +620,19 @@
         var time    = $('#rideTime').value;
         var seats   = parseInt($('#rideSeats').value, 10);
         var comment = $('#rideComment').value.trim();
-        var contact = $('#rideContact').value.trim();
-        var name    = $('#rideName').value.trim();
 
-        if (!from)    { showToast("Вкажіть звідки їдете"); return; }
-        if (!to)      { showToast("Вкажіть куди їдете"); return; }
-        if (!date)    { showToast("Оберіть дату поїздки"); return; }
-        if (!time)    { showToast("Вкажіть час відправлення"); return; }
-        if (!name)    { showToast("Вкажіть ваше ім'я"); return; }
-        if (!contact) { showToast("Вкажіть телефон для зв'язку"); return; }
+        if (!from) { showToast("Вкажіть звідки їдете"); return; }
+        if (!to)   { showToast("Вкажіть куди їдете"); return; }
+        if (!date) { showToast("Оберіть дату поїздки"); return; }
+        if (!time) { showToast("Вкажіть час відправлення"); return; }
 
         var token = getToken();
         if (!token) { showToast('Увійдіть, щоб додати попутку'); return; }
+        var currentUser = getCachedUser();
+        if (!currentUser || !currentUser.phone) {
+          showToast('Заповніть телефон у профілі перед створенням поїздки');
+          return;
+        }
 
         var btn = form.querySelector('button[type="submit"]');
         setSubmitLoading(btn, true);
@@ -554,8 +640,8 @@
         apiFetch('POST', '/rides', {
           from_place: from, to_place: to,
           ride_date: date, ride_time: time,
-          seats: seats, name: name,
-          contact: contact, comment: comment || null
+          seats: seats,
+          comment: comment || null
         }, token)
           .then(function (res) {
             if (res.status === 401) throw new Error('auth');
