@@ -4228,7 +4228,7 @@ function resetAlbums() {
               statusRow('Статті',     c.article,      t.article) +
             '</div>' +
             '<div style="margin-top:20px;text-align:center">' +
-              '<a href="/my/articles/new" class="btn-submit" style="display:inline-block;text-decoration:none">&#128221; Подати статтю</a>' +
+              '<a href="/my/articles/new" class="btn-cta">&#128221; Подати статтю</a>' +
             '</div>';
         })
         .catch(function () { wrap.innerHTML = '<p class="admin-loading">Не вдалося завантажити рейтинг</p>'; });

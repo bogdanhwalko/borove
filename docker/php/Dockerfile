@@ -9,13 +9,23 @@ RUN apk add --no-cache \
         unzip \
         oniguruma-dev \
         libzip-dev \
+        libpng-dev \
+        libjpeg-turbo-dev \
+        freetype-dev \
+        libwebp-dev \
         mysql-client \
         netcat-openbsd \
+    && docker-php-ext-configure gd \
+        --with-freetype \
+        --with-jpeg \
+        --with-webp \
     && docker-php-ext-install \
         pdo \
         pdo_mysql \
         mbstring \
         zip \
+        gd \
+        exif \
     && rm -rf /var/cache/apk/*
 
 # PHP upload settings

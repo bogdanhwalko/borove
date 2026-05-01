@@ -64,6 +64,7 @@
   <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="siteMenu" aria-label="Відкрити меню">&#9776;</button>
   <ul id="siteMenu" role="list">
     <li><a href="/">&#127968; Головна</a></li>
+    <li><a href="/articles">&#128240; Новини</a></li>
     <li><a href="/announcements">&#128203; Оголошення</a></li>
     <li><a href="/rides">&#128664; Попутки</a></li>
     <li><a href="/gallery">&#128247; Галерея</a></li>
@@ -85,9 +86,11 @@
         <h4>Навігація</h4>
         <ul>
           <li><a href="/">&#127968; Головна</a></li>
+          <li><a href="/articles">&#128240; Новини</a></li>
           <li><a href="/announcements">&#128203; Оголошення</a></li>
           <li><a href="/rides">&#128664; Попутки</a></li>
           <li><a href="/gallery">&#128247; Галерея</a></li>
+          <li><a href="/shop">&#128717; Базар</a></li>
         </ul>
       </div>
       <div class="footer-col">

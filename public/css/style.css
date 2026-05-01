@@ -4544,6 +4544,31 @@ a.shop-name-title:focus { color: var(--p-mid); }
   box-shadow: var(--sh-sm, 0 6px 14px rgba(0,0,0,.08));
 }
 
+/* ── PRIMARY INLINE CTA BUTTON (link-friendly) ───────────── */
+.btn-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, var(--p-mid) 0%, var(--p) 100%);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: .9rem;
+  letter-spacing: .3px;
+  padding: 10px 22px;
+  border-radius: var(--r-xl);
+  border: none;
+  box-shadow: 0 4px 14px rgba(44,110,73,.35);
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+}
+.btn-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(44,110,73,.45);
+  color: #fff;
+}
+.btn-cta:active { transform: translateY(0); }
+
 /* ── MODERATION SUB-TABS ─────────────────────────────────── */
 .mod-subtabs {
   display: flex;
