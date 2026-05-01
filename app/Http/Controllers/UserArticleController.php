@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Article;
+use App\Services\ModerationNotifier;
 use App\Services\UserRatingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -59,6 +60,15 @@ class UserArticleController extends Controller
             'user_id'      => $user->id,
             'status'       => $status,
         ]);
+
+        if ($article->status === 'pending') {
+            app(ModerationNotifier::class)->notifyPending(
+                '📰 Стаття',
+                $article->title,
+                $user,
+                url('/admin') . '#moderation-articles'
+            );
+        }
 
         return response()->json($article, 201);
     }

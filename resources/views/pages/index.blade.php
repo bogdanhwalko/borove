@@ -82,7 +82,7 @@
           <div id="topProductBody" class="top-product-wrap"></div>
         </div>
 
-        <div class="widget fade-in">
+        <div class="widget fade-in widget--feedback">
           <div class="widget-header">&#9993; Зворотний зв'язок з адміном</div>
           <div class="widget-body">
             <div id="feedbackAuthNotice" class="form-auth-notice feedback-auth-notice">

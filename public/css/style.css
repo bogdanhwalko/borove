@@ -1936,7 +1936,13 @@ ul { list-style: none; }
     -ms-flex-direction: column;
     flex-direction: column;
   }
-  .content-sidebar { width: 100%; -webkit-box-ordinal-group: 0; -ms-flex-order: -1; order: -1; }
+  /* Flatten sidebar on mobile so we can re-order individual widgets */
+  .content-sidebar { display: contents; }
+  .content-sidebar > .widget { width: 100%; order: -1; }
+  /* Main content sits between regular widgets and the feedback widget */
+  .content-main { order: 0; }
+  /* Feedback form pinned to the very bottom on mobile (specificity > sidebar > widget) */
+  .content-sidebar > .widget--feedback { order: 99; }
   .widget { margin-bottom: 16px; }
 
   /* Prevent nav from wrapping to a second line at tablet widths */

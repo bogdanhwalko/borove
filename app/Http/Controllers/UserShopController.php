@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\PurchaseRequest;
 use App\Models\Shop;
+use App\Services\ModerationNotifier;
 use App\Services\UserRatingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -66,6 +67,15 @@ class UserShopController extends Controller
             'photo_path'  => $photoPath,
             'status'      => app(UserRatingService::class)->statusForProduct($user),
         ]);
+
+        if ($product->status === 'pending') {
+            app(ModerationNotifier::class)->notifyPending(
+                '🛒 Товар',
+                $product->title,
+                $user,
+                url('/admin') . '#moderation-products'
+            );
+        }
 
         return response()->json($product, 201);
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ride;
+use App\Services\ModerationNotifier;
 use App\Services\UserRatingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -59,6 +60,15 @@ class RideController extends Controller
         $data['status']    = app(UserRatingService::class)->statusForRide($user);
 
         $ride = Ride::create($data);
+
+        if ($ride->status === 'pending') {
+            app(ModerationNotifier::class)->notifyPending(
+                '🚗 Попутка',
+                $ride->from_place . ' → ' . $ride->to_place . ' (' . $ride->ride_date . ' ' . $ride->ride_time . ')',
+                $user,
+                url('/admin') . '#moderation-rides'
+            );
+        }
 
         return response()->json($ride, 201);
     }

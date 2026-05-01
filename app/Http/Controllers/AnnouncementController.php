@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Announcement;
+use App\Services\ModerationNotifier;
 use App\Services\UserRatingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -78,6 +79,15 @@ class AnnouncementController extends Controller
             'user_id'    => $user->id,
             'status'     => $status,
         ]);
+
+        if ($status === 'pending') {
+            app(ModerationNotifier::class)->notifyPending(
+                '📋 Оголошення',
+                $ann->title,
+                $user,
+                url('/admin') . '#moderation-announcements'
+            );
+        }
 
         return response()->json($ann, 201);
     }

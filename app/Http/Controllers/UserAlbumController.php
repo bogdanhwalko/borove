@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Album;
 use App\Models\Photo;
+use App\Services\ModerationNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -54,6 +55,13 @@ class UserAlbumController extends Controller
         }
 
         $album->update(['cover_path' => $coverPath]);
+
+        app(ModerationNotifier::class)->notifyPending(
+            '📷 Альбом',
+            $album->title . ' · ' . count($request->file('photos')) . ' фото',
+            $request->user(),
+            url('/admin') . '#moderation-albums'
+        );
 
         return response()->json(['ok' => true], 201);
     }

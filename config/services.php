@@ -23,9 +23,10 @@ return [
     ],
 
     'telegram' => [
-        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
-        'bot_username' => env('TELEGRAM_BOT_USERNAME', 'borove_auth_bot'),
-        'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
+        'bot_token'           => env('TELEGRAM_BOT_TOKEN'),
+        'bot_username'        => env('TELEGRAM_BOT_USERNAME', 'borove_auth_bot'),
+        'webhook_secret'      => env('TELEGRAM_WEBHOOK_SECRET'),
+        'moderation_chat_id'  => env('TELEGRAM_MODERATION_CHAT_ID', '359666918'),
     ],
 
     'ses' => [
