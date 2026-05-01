@@ -10,8 +10,11 @@ use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserAlbumController;
 use App\Http\Controllers\MarketController;
+use App\Http\Controllers\TelegramBotController;
 use App\Http\Controllers\UserShopController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware('throttle:60,1')->post('/telegram/webhook', [TelegramBotController::class, 'webhook']);
 
 // Auth
 Route::middleware('throttle:10,1')->group(function () {

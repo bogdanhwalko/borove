@@ -1610,6 +1610,13 @@
 
     switchTab(/[?&]tab=register/.test(window.location.search) ? 'register' : 'login');
 
+    var telegramCodeInput = document.getElementById('regTelegramCode');
+    if (telegramCodeInput) {
+      telegramCodeInput.addEventListener('input', function () {
+        this.value = String(this.value || '').replace(/\D/g, '').substring(0, 6);
+      });
+    }
+
     var pwToggles = Array.prototype.slice.call(document.querySelectorAll('.btn-pw-toggle'));
     pwToggles.forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -1668,6 +1675,7 @@
         clearErr(this);
         var els = this.elements;
         var phone = normalizePhone(els.phone.value);
+        var telegramCode = String(els.telegramCode.value || '').replace(/\D/g, '');
 
         if (!els.lastName.value.trim())   { showErr(registerForm, 'Вкажіть прізвище');       return; }
         if (!els.firstName.value.trim())  { showErr(registerForm, "Вкажіть ім'я");            return; }
@@ -1676,6 +1684,10 @@
         if (!els.nickname.value.trim())   { showErr(registerForm, 'Вкажіть кличку');          return; }
         if (phone.length !== 10 || phone[0] !== '0') {
           showErr(registerForm, 'Введіть повний номер: +380 XX XXX-XX-XX');
+          return;
+        }
+        if (!/^[0-9]{6}$/.test(telegramCode)) {
+          showErr(registerForm, 'Введіть 6-значний код з Telegram');
           return;
         }
         if (els.password.value.length < 8) {
@@ -1696,6 +1708,7 @@
           street:                els.street.value.trim(),
           nickname:              els.nickname.value.trim(),
           phone:                 phone,
+          telegram_code:         telegramCode,
           password:              els.password.value,
           password_confirmation: els.passwordConfirm.value
         })

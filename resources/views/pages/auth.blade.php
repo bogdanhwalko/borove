@@ -90,6 +90,22 @@
           </div>
         </div>
 
+        <div class="telegram-verify-box">
+          <div class="telegram-verify-row">
+            <div>
+              <div class="telegram-verify-title">Підтвердження через Telegram</div>
+              <div class="telegram-verify-note">Отримайте код у боті та введіть його нижче.</div>
+            </div>
+            <a class="telegram-verify-link" href="https://t.me/borove_auth_bot" target="_blank" rel="noopener">Перейти та отримати код</a>
+          </div>
+          <div class="form-group telegram-code-group">
+            <label for="regTelegramCode">Код з Telegram <span class="req">*</span></label>
+            <input type="text" id="regTelegramCode" name="telegramCode"
+                   placeholder="123456"
+                   autocomplete="one-time-code" inputmode="numeric" maxlength="6">
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="regPassword">Пароль <span class="req">*</span></label>
           <div class="pw-wrap">

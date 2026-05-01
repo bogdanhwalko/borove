@@ -3,15 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\TelegramPhoneVerifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function register(Request $request): JsonResponse
+    public function register(Request $request, TelegramPhoneVerifier $verifier): JsonResponse
     {
         $data = $request->validate([
             'last_name'             => 'required|string|max:100',
@@ -20,18 +22,27 @@ class AuthController extends Controller
             'street'                => 'required|string|max:200',
             'nickname'              => 'required|string|max:50|unique:users',
             'phone'                 => ['required', 'string', 'regex:/^0[0-9]{9}$/', 'unique:users'],
+            'telegram_code'         => ['required', 'string', 'regex:/^[0-9]{6}$/'],
             'password'              => 'required|string|min:8|confirmed',
         ]);
 
-        $user = User::create([
-            'last_name'  => $data['last_name'],
-            'first_name' => $data['first_name'],
-            'patronymic' => $data['patronymic'],
-            'street'     => $data['street'],
-            'nickname'   => $data['nickname'],
-            'phone'      => $data['phone'],
-            'password'   => Hash::make($data['password']),
-        ]);
+        $user = DB::transaction(function () use ($data, $verifier): User {
+            if (!$verifier->verify($data['phone'], $data['telegram_code'])) {
+                throw ValidationException::withMessages([
+                    'telegram_code' => ['Невірний або прострочений код Telegram. Отримайте новий код у боті.'],
+                ]);
+            }
+
+            return User::create([
+                'last_name'  => $data['last_name'],
+                'first_name' => $data['first_name'],
+                'patronymic' => $data['patronymic'],
+                'street'     => $data['street'],
+                'nickname'   => $data['nickname'],
+                'phone'      => $data['phone'],
+                'password'   => Hash::make($data['password']),
+            ]);
+        });
 
         $token = $user->createToken('borove-app')->plainTextToken;
 

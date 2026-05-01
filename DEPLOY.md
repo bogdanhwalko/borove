@@ -154,6 +154,10 @@ QUEUE_CONNECTION=sync
 
 SANCTUM_STATEFUL_DOMAINS=yourdomain.com
 SESSION_DOMAIN=yourdomain.com
+
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_BOT_USERNAME=borove_auth_bot
+TELEGRAM_WEBHOOK_SECRET=optional_random_secret
 ```
 
 Згенеруйте ключ:
@@ -173,6 +177,12 @@ php artisan storage:link
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
+```
+
+Якщо увімкнена реєстрація через Telegram-бота, після налаштування `APP_URL` і `TELEGRAM_BOT_TOKEN` встановіть webhook:
+
+```bash
+php artisan telegram:set-webhook
 ```
 
 **Без SSH:** деякі cPanel-хости мають **«Setup PHP Worker»** або кнопку **«Run command»**. Альтернатива — створіть тимчасовий PHP-скрипт у `public/migrate.php`:
