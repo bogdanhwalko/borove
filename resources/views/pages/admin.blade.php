@@ -2,6 +2,7 @@
 
 @section('title', 'Адмін — Борове')
 @section('description', 'Адміністрування сайту Борове')
+@section('noindex', 'true')
 
 @section('content')
 

@@ -2,6 +2,7 @@
 
 @section('title', 'Увійти | Борове')
 @section('description', 'Вхід та реєстрація — Борове')
+@section('noindex', 'true')
 
 @section('content')
 

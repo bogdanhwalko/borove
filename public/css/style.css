@@ -4434,6 +4434,116 @@ a.shop-name-title:focus { color: var(--p-mid); }
   .profile-name, .profile-nickname { text-align: left; }
 }
 
+/* ── DETAIL PAGES (product / announcement / ride) ─────────── */
+.product-detail,
+.announcement-detail,
+.ride-detail {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 24px;
+  box-shadow: var(--sh-xs);
+}
+.product-detail-img {
+  width: 100%;
+  max-height: 460px;
+  object-fit: cover;
+  border-radius: var(--r);
+  margin-bottom: 20px;
+}
+.product-detail-img--placeholder {
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  color: var(--muted);
+  background: #f4f4f4;
+}
+.product-detail-body h1 { font-size: 1.6rem; margin: 0 0 12px; line-height: 1.25; }
+.product-detail-price {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent, #1A4731);
+  margin-bottom: 16px;
+}
+.product-detail-desc {
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  white-space: pre-wrap;
+}
+.product-detail-seller {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+  font-size: .95rem;
+}
+.product-detail-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.announcement-detail h1 { font-size: 1.6rem; margin: 12px 0 16px; line-height: 1.25; }
+.announcement-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: .85rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.announcement-detail-img {
+  width: 100%;
+  max-height: 460px;
+  object-fit: cover;
+  border-radius: var(--r);
+  margin: 16px 0;
+}
+.announcement-detail-body {
+  font-size: 1rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  margin-bottom: 20px;
+}
+.announcement-detail-contact {
+  padding: 12px 16px;
+  background: #f9f7ee;
+  border-left: 4px solid var(--accent, #1A4731);
+  border-radius: 6px;
+  font-size: .95rem;
+}
+
+.ride-detail h1 { font-size: 1.5rem; margin: 0 0 16px; }
+.ride-detail-meta {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  font-size: .95rem;
+}
+.ride-detail-meta a { color: var(--accent, #1A4731); text-decoration: none; }
+.ride-detail-meta a:hover { text-decoration: underline; }
+.ride-detail-comment {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.ride-detail-comment h3 { font-size: 1rem; margin: 0 0 8px; }
+.ride-detail-comment p { line-height: 1.6; white-space: pre-wrap; margin: 0; }
+
+.product-card,
+.ann-card,
+.ride-card {
+  cursor: pointer;
+  transition: transform .12s, box-shadow .12s;
+}
+.product-card:hover,
+.ann-card:hover,
+.ride-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sh-sm, 0 6px 14px rgba(0,0,0,.08));
+}
+
 /* ── PRINT ───────────────────────────────────────────────── */
 @media print {
   .site-nav, .news-ticker, .site-footer, .btn-submit,

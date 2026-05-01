@@ -7,6 +7,25 @@
   <meta name="theme-color" content="#1A4731">
   <meta name="description" content="@yield('description', 'Офіційний сайт села Борове — новини, оголошення, попутки')">
   <title>@yield('title', 'Борове — Сільська газета')</title>
+
+  @hasSection('noindex')
+    <meta name="robots" content="noindex, nofollow">
+  @else
+    <link rel="canonical" href="{{ url()->current() }}">
+    <meta property="og:type" content="@yield('og_type', 'website')">
+    <meta property="og:title" content="@yield('og_title', View::getSection('title') ?: 'Борове — Сільська громада')">
+    <meta property="og:description" content="@yield('og_description', View::getSection('description') ?: 'Офіційний сайт села Борове')">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:image" content="@yield('og_image', url('/img/header-village.jpg'))">
+    <meta property="og:locale" content="uk_UA">
+    <meta property="og:site_name" content="Борове">
+    <meta name="twitter:card" content="summary_large_image">
+  @endif
+
+  @hasSection('jsonld')
+    <script type="application/ld+json">@yield('jsonld')</script>
+  @endif
+
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">

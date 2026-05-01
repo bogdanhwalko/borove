@@ -304,9 +304,10 @@
     var delBtn = isAdmin
       ? '<button class="card-admin-del" data-id="' + ann.id + '" title="Видалити">&#128465;</button>'
       : '';
-    return '<div class="ann-card ' + ann.type + '" data-type="' + ann.type + '">' +
+    var detailUrl = '/announcements/' + ann.id;
+    return '<div class="ann-card ' + ann.type + '" data-type="' + ann.type + '" data-href="' + detailUrl + '">' +
       '<div class="ann-card-header">' +
-        '<div>' + tag + '<h3>' + escHtml(ann.title) + '</h3></div>' +
+        '<div>' + tag + '<h3><a href="' + detailUrl + '">' + escHtml(ann.title) + '</a></h3></div>' +
         '<div class="ann-card-header-right">' +
           (date ? '<span class="ann-card-date">&#128197; ' + date + '</span>' : '') +
           delBtn +
@@ -593,14 +594,15 @@
         '</div>';
     }
 
-    return '<div class="ride-card' + (isOwn ? ' ride-card--own' : '') + '">' +
+    var detailUrl = '/rides/' + r.id;
+    return '<div class="ride-card' + (isOwn ? ' ride-card--own' : '') + '" data-href="' + detailUrl + '">' +
       '<div class="ride-card-icon">&#128664;</div>' +
       '<div class="ride-card-body">' +
         '<div class="ride-card-top">' +
           seatsBadge(r.seats) +
           delBtn +
         '</div>' +
-        '<div class="ride-card-route">' + escHtml(r.from_place) + '<span class="sep">&#8594;</span>' + escHtml(r.to_place) + '</div>' +
+        '<div class="ride-card-route"><a href="' + detailUrl + '">' + escHtml(r.from_place) + '<span class="sep">&#8594;</span>' + escHtml(r.to_place) + '</a></div>' +
         '<div class="ride-card-meta">' +
           '<span class="meta-item">&#128197; ' + date + '</span>' +
           '<span class="meta-item">&#128336; ' + time + '</span>' +
@@ -1789,10 +1791,11 @@
     var imgHtml = p.photo_path
       ? '<img class="product-card-img product-card-img--clickable" src="' + photoSrc(p.photo_path) + '" alt="' + escHtml(p.title) + '" loading="lazy" data-src="' + photoSrc(p.photo_path) + '" data-alt="' + escHtml(p.title) + '">'
       : '<div class="product-card-img-placeholder">&#128717;</div>';
-    return '<div class="product-card fade-in' + (isOwn ? ' product-card--own' : '') + '">' +
+    var detailUrl = '/products/' + p.id;
+    return '<div class="product-card fade-in' + (isOwn ? ' product-card--own' : '') + '" data-href="' + detailUrl + '">' +
       imgHtml +
       '<div class="product-card-body">' +
-        '<div class="product-card-title">' + escHtml(p.title) + '</div>' +
+        '<div class="product-card-title"><a href="' + detailUrl + '">' + escHtml(p.title) + '</a></div>' +
         (p.description ? '<div class="product-card-desc">' + escHtml(p.description) + '</div>' : '') +
         productPriceHtml(p) +
         '<div class="product-card-seller">&#128100; ' + sellerLink(p) + (date ? ' &middot; ' + date : '') + '</div>' +
@@ -2228,6 +2231,57 @@
         .then(function (shop) {
           if (shop && shop.id) { myShopId = shop.id; renderPage(); }
         });
+    }
+  }
+
+  /* ── Product detail page (/products/{id}) ─────── */
+  function initProductDetailPage() {
+    var btn = document.getElementById('productBuyBtn');
+    if (!btn) return;
+
+    var modal       = document.getElementById('buyModal');
+    var modalMsg    = document.getElementById('buyMessage');
+    var modalOk     = document.getElementById('buyModalConfirm');
+    var modalCancel = document.getElementById('buyModalCancel');
+
+    var productId = parseInt(btn.dataset.id, 10);
+    var sellerId  = btn.dataset.sellerId ? parseInt(btn.dataset.sellerId, 10) : null;
+
+    btn.addEventListener('click', function () {
+      var token = getToken();
+      if (!token) { showToast('Увійдіть, щоб надіслати запит'); return; }
+      var cu = getCachedUser() || {};
+      if (sellerId != null && cu.id != null && Number(cu.id) === sellerId) {
+        showToast('Це ваш власний товар');
+        return;
+      }
+      if (modalMsg) modalMsg.value = '';
+      if (modal)    modal.style.display = 'flex';
+    });
+
+    if (modalCancel) modalCancel.addEventListener('click', function () { if (modal) modal.style.display = 'none'; });
+
+    if (modalOk) {
+      modalOk.addEventListener('click', function () {
+        var token = getToken();
+        if (!token) { showToast('Увійдіть'); return; }
+        var msg = modalMsg ? modalMsg.value.trim() : '';
+        setSubmitLoading(modalOk, true);
+        apiFetch('POST', '/products/' + productId + '/buy-request', { message: msg || null }, token)
+          .then(function (res) {
+            if (res.status === 422) return res.json().then(function (d) { throw new Error(d.message || 'error'); });
+            if (!res.ok) throw new Error();
+            return res.json();
+          })
+          .then(function () {
+            if (modal) modal.style.display = 'none';
+            btn.disabled = true;
+            btn.textContent = '✓ Запит надіслано';
+            showToast('✓ Запит надіслано! Продавець побачить ваш контакт.');
+          })
+          .catch(function (err) { showToast(err.message || 'Помилка'); })
+          .finally(function () { setSubmitLoading(modalOk, false); });
+      });
     }
   }
 
@@ -3834,6 +3888,7 @@ function resetAlbums() {
     initArticlesListPage();
     initIndexAlbums();
     initShopPage();
+    initProductDetailPage();
     initRequestsPage();
     initHomeProducts();
     initWeatherWidget();

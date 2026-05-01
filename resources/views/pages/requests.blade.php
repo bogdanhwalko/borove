@@ -2,6 +2,7 @@
 
 @section('title', 'Запити на покупку — Борове')
 @section('description', 'Запити на покупку — моя палатка')
+@section('noindex', 'true')
 
 @section('content')
 

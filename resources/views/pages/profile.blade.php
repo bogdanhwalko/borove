@@ -2,6 +2,7 @@
 
 @section('title', 'Мій профіль — Борове')
 @section('description', 'Мій профіль — Борове')
+@section('noindex', 'true')
 
 @section('content')
 

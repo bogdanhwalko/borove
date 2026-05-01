@@ -1,2 +1,8 @@
 User-agent: *
-Disallow:
+Disallow: /admin
+Disallow: /profile
+Disallow: /requests
+Disallow: /auth
+Disallow: /api/
+
+Sitemap: https://borove.com.ua/sitemap.xml
