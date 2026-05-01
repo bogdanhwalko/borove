@@ -541,7 +541,7 @@
             });
             return res.json();
           })
-          .then(function () {
+          .then(function (created) {
             $$('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
             var allBtn = $('[data-filter="all"]');
             if (allBtn) allBtn.classList.add('active');
@@ -550,7 +550,11 @@
             form.reset();
             if (imgName) { imgName.textContent = 'Вибрати фото'; }
             if (imgLabel) { imgLabel.classList.remove('has-file'); }
-            showToast('✓ Оголошення додано!');
+            if (created && created.status === 'pending') {
+              showToast('Оголошення на модерації — з\'явиться після перевірки адміністратором');
+            } else {
+              showToast('✓ Оголошення додано!');
+            }
             loadPage();
             list.scrollIntoView({ behavior: 'smooth', block: 'start' });
           })
@@ -813,7 +817,11 @@
             allRides.unshift(ride);
             render();
             form.reset();
-            showToast('✓ Попутку додано!');
+            if (ride && ride.status === 'pending') {
+              showToast('Попутка на модерації — з\'явиться після перевірки адміністратором');
+            } else {
+              showToast('✓ Попутку додано!');
+            }
             list.scrollIntoView({ behavior: 'smooth', block: 'start' });
           })
           .catch(function (err) {
@@ -1240,6 +1248,8 @@
   /* ── all articles page ───────────────────────── */
   function initArticlesListPage() {
     var grid = document.getElementById('articlesListGrid');
+    var cta  = document.getElementById('articlesSubmitCta');
+    if (cta && getToken() && getCachedUser()) cta.style.display = '';
     if (!grid) return;
 
     var pagEl = document.getElementById('articlesListPagination');
@@ -2211,7 +2221,11 @@
               if (prodPhotoNm) prodPhotoNm.textContent = 'Вибрати фото';
               if (prodPhotoLbl) prodPhotoLbl.classList.remove('has-file');
               loadMySidebar();
-              showToast('✓ Товар додано!');
+              if (prod.status === 'pending') {
+                showToast('Товар на модерації — з\'явиться у каталозі після перевірки');
+              } else {
+                showToast('✓ Товар додано!');
+              }
             })
             .catch(function (err) { showToast(err.message || 'Помилка'); })
             .finally(function () { setSubmitLoading(btn, false); });
@@ -2232,6 +2246,125 @@
           if (shop && shop.id) { myShopId = shop.id; renderPage(); }
         });
     }
+  }
+
+  /* ── My article new page (/my/articles/new) ─── */
+  function initMyArticleNewPage() {
+    var gate  = document.getElementById('myArticleGate');
+    var panel = document.getElementById('myArticlePanel');
+    if (!gate || !panel) return;
+
+    var token = getToken();
+    var user  = getCachedUser();
+    if (!token || !user) { window.location.replace('/auth'); return; }
+
+    gate.style.display = 'none';
+    panel.style.display = '';
+
+    /* show rating-derived notice */
+    var notice = document.getElementById('myArticleNotice');
+    apiFetch('GET', '/profile/rating', null, token)
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!notice || !d) return;
+        var ok = d.can_publish && d.can_publish.article;
+        var span  = notice.querySelector('span');
+        var small = notice.querySelector('small');
+        notice.style.display = '';
+        if (ok) {
+          span.textContent  = '✅ Ваш рейтинг достатній — статтю буде опубліковано одразу';
+          small.textContent = 'Рейтинг: ' + (d.breakdown.total) + ' балів';
+        } else {
+          span.textContent  = '⏳ Стаття піде на модерацію адміністратору';
+          small.textContent = 'Ваш рейтинг: ' + (d.breakdown.total) + ' балів. Для миттєвої публікації потрібно ' + (d.thresholds.article || 50) + '.';
+        }
+      })
+      .catch(function () {});
+
+    /* counters */
+    var summaryEl = document.getElementById('myArtSummary');
+    var summaryC  = document.getElementById('summaryCounter');
+    var bodyEl    = document.getElementById('myArtBody');
+    var bodyC     = document.getElementById('bodyCounter');
+
+    function updateSummary() { if (summaryC) summaryC.textContent = (summaryEl.value.length) + ' / 500'; }
+    function updateBody()    {
+      if (!bodyC) return;
+      var n = bodyEl.value.length;
+      bodyC.textContent = n + ' символів' + (n < 200 ? ' (потрібно мінімум 200)' : '');
+      bodyC.style.color = n < 200 ? '#c33' : '';
+    }
+    if (summaryEl) summaryEl.addEventListener('input', updateSummary);
+    if (bodyEl)    bodyEl.addEventListener('input', updateBody);
+
+    /* file label */
+    var img    = document.getElementById('myArtImage');
+    var imgLbl = document.getElementById('myArtImageLabel');
+    var imgNm  = document.getElementById('myArtImageName');
+    if (img) {
+      img.addEventListener('change', function () {
+        if (img.files[0]) {
+          imgNm.textContent = img.files[0].name;
+          imgLbl.classList.add('has-file');
+        } else {
+          imgNm.textContent = 'Вибрати фото';
+          imgLbl.classList.remove('has-file');
+        }
+      });
+    }
+
+    /* submit */
+    var form = document.getElementById('myArticleForm');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var title    = document.getElementById('myArtTitle').value.trim();
+      var category = document.getElementById('myArtCategory').value.trim();
+      var summary  = summaryEl.value.trim();
+      var body     = bodyEl.value.trim();
+
+      if (!title)              { showToast('Введіть заголовок');     return; }
+      if (!category)           { showToast('Введіть категорію');     return; }
+      if (summary.length < 10) { showToast('Опис надто короткий');   return; }
+      if (body.length < 200)   { showToast('Текст щонайменше 200 символів'); return; }
+
+      var fd = new FormData();
+      fd.append('title', title);
+      fd.append('category', category);
+      fd.append('summary', summary);
+      fd.append('body', body);
+      if (img && img.files[0]) fd.append('image', img.files[0]);
+
+      var btn = form.querySelector('button[type="submit"]');
+      setSubmitLoading(btn, true);
+
+      fetch('/api/my/articles', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: fd,
+      })
+        .then(function (r) {
+          return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+        })
+        .then(function (res) {
+          if (!res.ok) {
+            var msg = res.d && res.d.errors
+              ? Object.values(res.d.errors).flat().join(' ')
+              : (res.d && res.d.message ? res.d.message : 'Помилка');
+            throw new Error(msg);
+          }
+          if (res.d.status === 'pending') {
+            showToast('Стаття подана на модерацію');
+          } else {
+            showToast('✓ Статтю опубліковано');
+          }
+          setTimeout(function () {
+            window.location.href = res.d.status === 'published' && res.d.slug ? '/articles/' + res.d.slug : '/profile';
+          }, 1200);
+        })
+        .catch(function (err) { showToast(err.message || 'Помилка'); })
+        .finally(function () { setSubmitLoading(btn, false); });
+    });
   }
 
   /* ── Product detail page (/products/{id}) ─────── */
@@ -2614,9 +2747,29 @@
           s.style.display = s.id === 'tab' + name.charAt(0).toUpperCase() + name.slice(1) ? '' : 'none';
         });
         if (name === 'gallery') loadAlbums();
-        if (name === 'moderation') loadPendingAlbums();
+        if (name === 'moderation') {
+          loadPendingAlbums();
+          refreshAllPendingCounts();
+        }
         if (name === 'profiles') loadProfileRequests();
         if (name === 'feedback') loadFeedbackMessages();
+      });
+    });
+
+    /* ── Moderation sub-tabs ─────────────────────── */
+    $$('.mod-subtab').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        $$('.mod-subtab').forEach(function (t) { t.classList.remove('active'); });
+        btn.classList.add('active');
+        var k = btn.dataset.modtab;
+        $$('.mod-subsection').forEach(function (s) { s.style.display = 'none'; });
+        var sec = document.getElementById('modSec' + k.charAt(0).toUpperCase() + k.slice(1));
+        if (sec) sec.style.display = '';
+        if (k === 'albums')        loadPendingAlbums();
+        if (k === 'announcements') loadPendingAnnouncements();
+        if (k === 'rides')         loadPendingRides();
+        if (k === 'products')      loadPendingProducts();
+        if (k === 'articles')      loadPendingArticles();
       });
     });
 
@@ -2983,6 +3136,212 @@
           if (list) list.innerHTML = '<p class="admin-loading">Помилка завантаження</p>';
           if (pag) pag.innerHTML = '';
         });
+    }
+
+    /* ── Moderation: announcements / rides / products / articles ── */
+    function userLine(u) {
+      if (!u) return 'Невідомо';
+      var name = [u.last_name, u.first_name].filter(Boolean).join(' ') || u.nickname || ('Користувач #' + (u.id || ''));
+      var phone = u.phone ? ' · <a href="tel:' + escHtml(u.phone) + '">+380' + escHtml(String(u.phone).replace(/^0/, '')) + '</a>' : '';
+      return escHtml(name) + phone;
+    }
+
+    function modCard(opts) {
+      // opts: { id, type, headline, meta, body, image, footer, user }
+      var img = opts.image
+        ? '<img class="mod-card-img" src="' + opts.image + '" alt="" loading="lazy">'
+        : '';
+      return '<div class="mod-card" data-id="' + opts.id + '" data-type="' + opts.type + '">' +
+        img +
+        '<div class="mod-card-body">' +
+          '<div class="mod-card-meta">' + (opts.meta || '') + '</div>' +
+          '<h4 class="mod-card-headline">' + escHtml(opts.headline || '') + '</h4>' +
+          (opts.body ? '<p class="mod-card-text">' + escHtml(opts.body) + '</p>' : '') +
+          (opts.footer ? '<div class="mod-card-footer">' + opts.footer + '</div>' : '') +
+          '<div class="mod-card-author">&#128100; ' + userLine(opts.user) + '</div>' +
+          '<div class="mod-card-actions">' +
+            '<button class="btn-submit mod-btn-publish" data-id="' + opts.id + '" data-type="' + opts.type + '">&#9989; Опублікувати</button>' +
+            '<button class="btn-cancel mod-btn-reject" data-id="' + opts.id + '" data-type="' + opts.type + '">&#10060; Відхилити</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function bindModActions(scope) {
+      scope.querySelectorAll('.mod-btn-publish').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.dataset.id, type = btn.dataset.type;
+          btn.disabled = true;
+          apiFetch('POST', '/admin/' + type + '/' + id + '/publish', null, token)
+            .then(function (r) { if (!r.ok) throw new Error(); })
+            .then(function () {
+              showToast('✓ Опубліковано');
+              btn.closest('.mod-card').remove();
+              refreshPendingCount(type);
+            })
+            .catch(function () { showToast('Помилка'); btn.disabled = false; });
+        });
+      });
+      scope.querySelectorAll('.mod-btn-reject').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (!confirm('Відхилити та видалити безповоротно?')) return;
+          var id = btn.dataset.id, type = btn.dataset.type;
+          btn.disabled = true;
+          apiFetch('POST', '/admin/' + type + '/' + id + '/reject', null, token)
+            .then(function (r) { if (!r.ok) throw new Error(); })
+            .then(function () {
+              showToast('✓ Відхилено');
+              btn.closest('.mod-card').remove();
+              refreshPendingCount(type);
+            })
+            .catch(function () { showToast('Помилка'); btn.disabled = false; });
+        });
+      });
+    }
+
+    function setBadge(elId, count) {
+      var el = document.getElementById(elId);
+      if (el) el.textContent = count > 0 ? count : '';
+    }
+
+    function refreshPendingCount(type) {
+      // Map type → endpoint + badge id
+      var endpointMap = {
+        announcements: '/admin/announcements/pending',
+        rides:         '/admin/rides/pending',
+        products:      '/admin/products/pending',
+        articles:      '/admin/articles/pending',
+      };
+      var badgeMap = {
+        announcements: 'modBadgeAnn',
+        rides:         'modBadgeRides',
+        products:      'modBadgeProducts',
+        articles:      'modBadgeArticles',
+      };
+      if (!endpointMap[type]) return;
+      apiFetch('GET', endpointMap[type], null, token)
+        .then(function (r) { return r.json(); })
+        .then(function (arr) { setBadge(badgeMap[type], (arr || []).length); });
+    }
+
+    function refreshAllPendingCounts() {
+      ['announcements', 'rides', 'products', 'articles'].forEach(refreshPendingCount);
+    }
+
+    function loadPendingAnnouncements() {
+      var list = document.getElementById('modListAnnouncements');
+      if (!list) return;
+      list.innerHTML = '<p class="admin-loading">Завантаження...</p>';
+      apiFetch('GET', '/admin/announcements/pending', null, token)
+        .then(function (r) { return r.json(); })
+        .then(function (items) {
+          setBadge('modBadgeAnn', items.length);
+          if (!items.length) {
+            list.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128203;</div><p>Немає оголошень на модерації</p></div>';
+            return;
+          }
+          var typeLabels = { urgent: '⚠️ Терміново', event: '📅 Подія', info: 'ℹ️ Інформація', services: '🛠️ Послуги' };
+          list.innerHTML = items.map(function (a) {
+            return modCard({
+              id:   a.id,
+              type: 'announcements',
+              meta: '<span class="ann-tag ' + a.type + '">' + (typeLabels[a.type] || a.type) + '</span>',
+              headline: a.title,
+              body: a.body,
+              image: a.image_path ? '/storage/' + a.image_path : '',
+              user: a.user,
+            });
+          }).join('');
+          bindModActions(list);
+        })
+        .catch(function () { list.innerHTML = '<p class="admin-loading">Помилка</p>'; });
+    }
+
+    function loadPendingRides() {
+      var list = document.getElementById('modListRides');
+      if (!list) return;
+      list.innerHTML = '<p class="admin-loading">Завантаження...</p>';
+      apiFetch('GET', '/admin/rides/pending', null, token)
+        .then(function (r) { return r.json(); })
+        .then(function (items) {
+          setBadge('modBadgeRides', items.length);
+          if (!items.length) {
+            list.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128664;</div><p>Немає попуток на модерації</p></div>';
+            return;
+          }
+          list.innerHTML = items.map(function (r) {
+            return modCard({
+              id:   r.id,
+              type: 'rides',
+              meta: '🚗 ' + escHtml(r.from_place) + ' → ' + escHtml(r.to_place),
+              headline: fmtIsoDate((r.ride_date || '').substring(0, 10)) + ' о ' + (r.ride_time || '').substring(0, 5),
+              body: r.comment || '',
+              footer: 'Місць: ' + (r.seats || 0),
+              user: r.user,
+            });
+          }).join('');
+          bindModActions(list);
+        })
+        .catch(function () { list.innerHTML = '<p class="admin-loading">Помилка</p>'; });
+    }
+
+    function loadPendingProducts() {
+      var list = document.getElementById('modListProducts');
+      if (!list) return;
+      list.innerHTML = '<p class="admin-loading">Завантаження...</p>';
+      apiFetch('GET', '/admin/products/pending', null, token)
+        .then(function (r) { return r.json(); })
+        .then(function (items) {
+          setBadge('modBadgeProducts', items.length);
+          if (!items.length) {
+            list.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128717;</div><p>Немає товарів на модерації</p></div>';
+            return;
+          }
+          list.innerHTML = items.map(function (p) {
+            var price = p.price != null ? Number(p.price).toLocaleString('uk-UA') + ' грн' : 'Ціна за домовленістю';
+            return modCard({
+              id:   p.id,
+              type: 'products',
+              meta: '🛍 ' + (p.shop ? escHtml(p.shop.name || '') : ''),
+              headline: p.title,
+              body: p.description || '',
+              image: p.photo_path ? '/storage/' + p.photo_path : '',
+              footer: '<strong>' + price + '</strong>',
+              user: p.shop && p.shop.user,
+            });
+          }).join('');
+          bindModActions(list);
+        })
+        .catch(function () { list.innerHTML = '<p class="admin-loading">Помилка</p>'; });
+    }
+
+    function loadPendingArticles() {
+      var list = document.getElementById('modListArticles');
+      if (!list) return;
+      list.innerHTML = '<p class="admin-loading">Завантаження...</p>';
+      apiFetch('GET', '/admin/articles/pending', null, token)
+        .then(function (r) { return r.json(); })
+        .then(function (items) {
+          setBadge('modBadgeArticles', items.length);
+          if (!items.length) {
+            list.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128221;</div><p>Немає статей на модерації</p></div>';
+            return;
+          }
+          list.innerHTML = items.map(function (a) {
+            return modCard({
+              id:   a.id,
+              type: 'articles',
+              meta: '📰 ' + escHtml(a.category || ''),
+              headline: a.title,
+              body: a.summary || '',
+              image: a.image_path ? '/storage/' + a.image_path : '',
+              footer: '<a href="/articles/' + escHtml(a.slug) + '" target="_blank">Переглянути повний текст →</a>',
+              user: a.user,
+            });
+          }).join('');
+          bindModActions(list);
+        })
+        .catch(function () { list.innerHTML = '<p class="admin-loading">Помилка</p>'; });
     }
 
     /* ── Profile change moderation ─────────────────── */
@@ -3525,6 +3884,7 @@ function resetAlbums() {
     }
 
     loadPendingAlbums();
+    refreshAllPendingCounts();
 
     // Lightweight count for profiles tab badge (no full data fetch on init)
     apiFetch('GET', '/admin/profile-requests?per_page=1&page=1', null, token)
@@ -3574,7 +3934,8 @@ function resetAlbums() {
         btn.classList.add('active');
         var sec = document.getElementById('ptab' + btn.dataset.ptab.charAt(0).toUpperCase() + btn.dataset.ptab.slice(1));
         if (sec) sec.style.display = '';
-        if (btn.dataset.ptab === 'logs') loadProfileLogs();
+        if (btn.dataset.ptab === 'logs')   loadProfileLogs();
+        if (btn.dataset.ptab === 'rating') loadProfileRating();
       });
     });
 
@@ -3832,6 +4193,47 @@ function resetAlbums() {
       });
     }
 
+    /* ── rating tab ── */
+    function loadProfileRating() {
+      var wrap = document.getElementById('ratingWrap');
+      if (!wrap) return;
+      apiFetch('GET', '/profile/rating', null, token)
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var b = d.breakdown || {};
+          var t = d.thresholds || {};
+          var c = d.can_publish || {};
+          function statusRow(label, ok, threshold) {
+            var icon = ok ? '✅' : '⏳';
+            var note = ok ? 'публікується одразу' : ('потрібно ' + threshold + ' балів — потрапляє на модерацію');
+            return '<div class="rating-status"><span>' + icon + ' ' + label + '</span><small>' + note + '</small></div>';
+          }
+          wrap.innerHTML =
+            '<div class="rating-total">' +
+              '<div class="rating-total-num">' + (b.total || 0) + '</div>' +
+              '<div class="rating-total-label">балів усього</div>' +
+            '</div>' +
+            '<div class="rating-breakdown">' +
+              '<div class="rating-row"><span>🚗 Попутки</span><strong>' + (b.rides || 0) + ' × 1 = ' + (b.rides || 0) + '</strong></div>' +
+              '<div class="rating-row"><span>📋 Оголошення</span><strong>' + (b.announcements || 0) + ' × 1 = ' + (b.announcements || 0) + '</strong></div>' +
+              '<div class="rating-row"><span>📷 Фото в альбомах</span><strong>' + (b.photos || 0) + ' × 0.3 = ' + ((b.photos || 0) * 0.3).toFixed(1) + '</strong></div>' +
+              '<div class="rating-row"><span>📰 Статті</span><strong>' + (b.articles || 0) + ' × 3 = ' + ((b.articles || 0) * 3) + '</strong></div>' +
+              '<div class="rating-row"><span>🛍 Товари</span><strong>' + (b.products || 0) + ' × 1 = ' + (b.products || 0) + '</strong></div>' +
+            '</div>' +
+            '<h4 style="margin-top:20px">Що можу публікувати без модерації</h4>' +
+            '<div class="rating-checks">' +
+              statusRow('Оголошення', c.announcement, t.announcement_ride) +
+              statusRow('Попутки',    c.ride,         t.announcement_ride) +
+              statusRow('Товари',     c.product,      t.product) +
+              statusRow('Статті',     c.article,      t.article) +
+            '</div>' +
+            '<div style="margin-top:20px;text-align:center">' +
+              '<a href="/my/articles/new" class="btn-submit" style="display:inline-block;text-decoration:none">&#128221; Подати статтю</a>' +
+            '</div>';
+        })
+        .catch(function () { wrap.innerHTML = '<p class="admin-loading">Не вдалося завантажити рейтинг</p>'; });
+    }
+
     /* ── activity log ── */
     var logsLoaded = false;
     function loadProfileLogs() {
@@ -3890,6 +4292,7 @@ function resetAlbums() {
     initShopPage();
     initProductDetailPage();
     initRequestsPage();
+    initMyArticleNewPage();
     initHomeProducts();
     initWeatherWidget();
     initAdminPage();

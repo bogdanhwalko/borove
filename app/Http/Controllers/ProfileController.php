@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\ProfileChangeRequest;
+use App\Services\UserRatingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -182,6 +183,27 @@ class ProfileController extends Controller
             ->get();
 
         return response()->json($logs);
+    }
+
+    public function rating(Request $request): JsonResponse
+    {
+        $rating = app(UserRatingService::class);
+        $user   = $request->user();
+
+        return response()->json([
+            'breakdown'  => $rating->breakdown($user),
+            'thresholds' => [
+                'announcement_ride' => UserRatingService::THRESHOLD_ANNOUNCEMENT_RIDE,
+                'product'           => UserRatingService::THRESHOLD_PRODUCT,
+                'article'           => UserRatingService::THRESHOLD_ARTICLE,
+            ],
+            'can_publish' => [
+                'announcement' => $rating->statusForAnnouncement($user) === 'published',
+                'ride'         => $rating->statusForRide($user) === 'published',
+                'product'      => $rating->statusForProduct($user) === 'published',
+                'article'      => $rating->statusForArticle($user) === 'published',
+            ],
+        ]);
     }
 
     private function userPayload($user): array

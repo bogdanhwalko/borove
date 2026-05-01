@@ -18,6 +18,7 @@ Route::get('/auth',           fn() => view('pages.auth'));
 Route::get('/admin',          fn() => view('pages.admin'));
 Route::get('/profile',        fn() => view('pages.profile'));
 Route::get('/requests',       fn() => view('pages.requests'));
+Route::get('/my/articles/new',fn() => view('pages.my-article-new'));
 
 Route::get('/products/{id}', function (int $id) {
     $product = Product::with([

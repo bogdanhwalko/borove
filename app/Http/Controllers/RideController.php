@@ -3,19 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ride;
+use App\Services\UserRatingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class RideController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        return response()->json(
-            Ride::whereRaw("CONCAT(ride_date, ' ', ride_time) >= NOW()")
-                ->orderBy('ride_date')
-                ->orderBy('ride_time')
-                ->get()
-        );
+        $userId = optional($request->user())->id;
+
+        $query = Ride::whereRaw("CONCAT(ride_date, ' ', ride_time) >= NOW()")
+            ->where(function ($q) use ($userId) {
+                $q->where('status', 'published');
+                if ($userId) $q->orWhere('user_id', $userId);
+            })
+            ->orderBy('ride_date')
+            ->orderBy('ride_time');
+
+        return response()->json($query->get());
     }
 
     public function store(Request $request): JsonResponse
@@ -50,6 +56,7 @@ class RideController extends Controller
         $data['name']      = mb_substr($name, 0, 100);
         $data['contact']   = $contact;
         $data['user_id']   = $user->id;
+        $data['status']    = app(UserRatingService::class)->statusForRide($user);
 
         $ride = Ride::create($data);
 

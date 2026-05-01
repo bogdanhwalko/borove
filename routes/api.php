@@ -9,6 +9,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserAlbumController;
+use App\Http\Controllers\UserArticleController;
 use App\Http\Controllers\MarketController;
 use App\Http\Controllers\TelegramBotController;
 use App\Http\Controllers\UserShopController;
@@ -32,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('throttle:5,1')->post('/profile/avatar',  [ProfileController::class, 'uploadAvatar']);
     Route::post('/profile/password',                            [ProfileController::class, 'changePassword']);
     Route::get('/profile/logs',                                 [ProfileController::class, 'logs']);
+    Route::get('/profile/rating',                               [ProfileController::class, 'rating']);
 });
 
 // Articles (public)
@@ -73,6 +75,12 @@ Route::middleware('auth:sanctum')->group(function () {
 // User gallery submission (auth)
 Route::middleware('auth:sanctum')->post('/my/albums', [UserAlbumController::class, 'store']);
 
+// User article submission (auth)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/my/articles',                         [UserArticleController::class, 'index']);
+    Route::middleware('throttle:5,60')->post('/my/articles', [UserArticleController::class, 'store']);
+});
+
 // Admin (auth + is_admin checked inside controller)
 Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::get('/articles',             [AdminController::class, 'indexArticles']);
@@ -99,4 +107,20 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::get('/feedback',                 [AdminController::class, 'indexFeedbackMessages']);
     Route::post('/feedback/{id}/close',     [AdminController::class, 'closeFeedbackMessage']);
     Route::delete('/feedback/{id}',         [AdminController::class, 'destroyFeedbackMessage']);
+
+    // Moderation queues
+    Route::get('/announcements/pending',         [AdminController::class, 'indexPendingAnnouncements']);
+    Route::post('/announcements/{id}/publish',   [AdminController::class, 'publishAnnouncement']);
+    Route::post('/announcements/{id}/reject',    [AdminController::class, 'rejectAnnouncement']);
+
+    Route::get('/rides/pending',                 [AdminController::class, 'indexPendingRides']);
+    Route::post('/rides/{id}/publish',           [AdminController::class, 'publishRide']);
+    Route::post('/rides/{id}/reject',            [AdminController::class, 'rejectRide']);
+
+    Route::get('/products/pending',              [AdminController::class, 'indexPendingProducts']);
+    Route::post('/products/{id}/publish',        [AdminController::class, 'publishProduct']);
+    Route::post('/products/{id}/reject',         [AdminController::class, 'rejectProduct']);
+
+    Route::get('/articles/pending',              [AdminController::class, 'indexPendingArticles']);
+    Route::post('/articles/{id}/publish',        [AdminController::class, 'publishArticle']);
 });

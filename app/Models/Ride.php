@@ -8,7 +8,7 @@ class Ride extends Model
 {
     protected $fillable = [
         'from_place', 'to_place', 'ride_date', 'ride_time',
-        'seats', 'name', 'contact', 'comment', 'user_id',
+        'seats', 'name', 'contact', 'comment', 'user_id', 'status',
     ];
 
     protected $casts = [

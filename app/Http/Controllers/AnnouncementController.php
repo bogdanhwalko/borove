@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Announcement;
+use App\Services\UserRatingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -11,6 +12,12 @@ class AnnouncementController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Announcement::latest();
+
+        $userId = optional($request->user())->id;
+        $query->where(function ($q) use ($userId) {
+            $q->where('status', 'published');
+            if ($userId) $q->orWhere('user_id', $userId);
+        });
 
         if ($request->filled('type') && $request->input('type') !== 'all') {
             $query->where('type', $request->input('type'));
@@ -60,12 +67,16 @@ class AnnouncementController extends Controller
             $imagePath = $request->file('image')->store('announcements', 'public');
         }
 
+        $status = app(UserRatingService::class)->statusForAnnouncement($user);
+
         $ann = Announcement::create([
             'type'       => $request->input('type'),
             'title'      => $request->input('title'),
             'body'       => $request->input('body'),
             'contact'    => $contact,
             'image_path' => $imagePath,
+            'user_id'    => $user->id,
+            'status'     => $status,
         ]);
 
         return response()->json($ann, 201);

@@ -8,6 +8,7 @@ use App\Models\Album;
 use App\Models\Announcement;
 use App\Models\FeedbackMessage;
 use App\Models\Photo;
+use App\Models\Product;
 use App\Models\ProfileChangeRequest;
 use App\Models\Ride;
 use App\Models\User;
@@ -452,6 +453,101 @@ class AdminController extends Controller
 
         FeedbackMessage::findOrFail($id)->delete();
 
+        return response()->json(['ok' => true]);
+    }
+
+    // ── Moderation: announcements / rides / products / articles ─────
+
+    public function indexPendingAnnouncements(Request $request): JsonResponse
+    {
+        $this->guard($request);
+        return response()->json(
+            Announcement::where('status', 'pending')
+                ->with('user:id,nickname,first_name,last_name,phone')
+                ->latest()->get()
+        );
+    }
+
+    public function publishAnnouncement(Request $request, int $id): JsonResponse
+    {
+        $this->guard($request);
+        Announcement::findOrFail($id)->update(['status' => 'published']);
+        return response()->json(['ok' => true]);
+    }
+
+    public function rejectAnnouncement(Request $request, int $id): JsonResponse
+    {
+        $this->guard($request);
+        $a = Announcement::findOrFail($id);
+        if ($a->image_path) Storage::disk('public')->delete($a->image_path);
+        $a->delete();
+        return response()->json(['ok' => true]);
+    }
+
+    public function indexPendingRides(Request $request): JsonResponse
+    {
+        $this->guard($request);
+        return response()->json(
+            Ride::where('status', 'pending')
+                ->with('user:id,nickname,first_name,last_name,phone')
+                ->latest()->get()
+        );
+    }
+
+    public function publishRide(Request $request, int $id): JsonResponse
+    {
+        $this->guard($request);
+        Ride::findOrFail($id)->update(['status' => 'published']);
+        return response()->json(['ok' => true]);
+    }
+
+    public function rejectRide(Request $request, int $id): JsonResponse
+    {
+        $this->guard($request);
+        Ride::findOrFail($id)->delete();
+        return response()->json(['ok' => true]);
+    }
+
+    public function indexPendingProducts(Request $request): JsonResponse
+    {
+        $this->guard($request);
+        return response()->json(
+            Product::where('status', 'pending')
+                ->with(['shop:id,user_id,name', 'shop.user:id,nickname,first_name,last_name,phone'])
+                ->latest()->get()
+        );
+    }
+
+    public function publishProduct(Request $request, int $id): JsonResponse
+    {
+        $this->guard($request);
+        Product::findOrFail($id)->update(['status' => 'published']);
+        return response()->json(['ok' => true]);
+    }
+
+    public function rejectProduct(Request $request, int $id): JsonResponse
+    {
+        $this->guard($request);
+        $p = Product::findOrFail($id);
+        if ($p->photo_path) Storage::disk('public')->delete($p->photo_path);
+        $p->delete();
+        return response()->json(['ok' => true]);
+    }
+
+    public function indexPendingArticles(Request $request): JsonResponse
+    {
+        $this->guard($request);
+        return response()->json(
+            Article::where('status', 'pending')
+                ->with('user:id,nickname,first_name,last_name,phone')
+                ->latest()->get()
+        );
+    }
+
+    public function publishArticle(Request $request, int $id): JsonResponse
+    {
+        $this->guard($request);
+        Article::findOrFail($id)->update(['status' => 'published']);
         return response()->json(['ok' => true]);
     }
 }

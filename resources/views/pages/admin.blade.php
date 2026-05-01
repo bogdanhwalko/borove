@@ -107,8 +107,30 @@
       </div>
 
       <div class="admin-section" id="tabModeration" style="display:none">
-        <div id="adminPendingList"><p class="admin-loading">Завантаження...</p></div>
-        <div id="adminPendingPagination"></div>
+        <div class="mod-subtabs" role="tablist">
+          <button class="mod-subtab active" data-modtab="albums">&#128247; Альбоми <span class="pending-badge" id="modBadgeAlbums"></span></button>
+          <button class="mod-subtab" data-modtab="announcements">&#128203; Оголошення <span class="pending-badge" id="modBadgeAnn"></span></button>
+          <button class="mod-subtab" data-modtab="rides">&#128664; Попутки <span class="pending-badge" id="modBadgeRides"></span></button>
+          <button class="mod-subtab" data-modtab="products">&#128717; Товари <span class="pending-badge" id="modBadgeProducts"></span></button>
+          <button class="mod-subtab" data-modtab="articles">&#128221; Статті <span class="pending-badge" id="modBadgeArticles"></span></button>
+        </div>
+
+        <div class="mod-subsection" id="modSecAlbums">
+          <div id="adminPendingList"><p class="admin-loading">Завантаження...</p></div>
+          <div id="adminPendingPagination"></div>
+        </div>
+        <div class="mod-subsection" id="modSecAnnouncements" style="display:none">
+          <div id="modListAnnouncements"><p class="admin-loading">Завантаження...</p></div>
+        </div>
+        <div class="mod-subsection" id="modSecRides" style="display:none">
+          <div id="modListRides"><p class="admin-loading">Завантаження...</p></div>
+        </div>
+        <div class="mod-subsection" id="modSecProducts" style="display:none">
+          <div id="modListProducts"><p class="admin-loading">Завантаження...</p></div>
+        </div>
+        <div class="mod-subsection" id="modSecArticles" style="display:none">
+          <div id="modListArticles"><p class="admin-loading">Завантаження...</p></div>
+        </div>
       </div>
 
       <div class="admin-section" id="tabProfiles" style="display:none">

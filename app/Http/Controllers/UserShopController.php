@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\PurchaseRequest;
 use App\Models\Shop;
+use App\Services\UserRatingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -63,6 +64,7 @@ class UserShopController extends Controller
             'description' => $request->input('description'),
             'price'       => $request->input('price'),
             'photo_path'  => $photoPath,
+            'status'      => app(UserRatingService::class)->statusForProduct($user),
         ]);
 
         return response()->json($product, 201);

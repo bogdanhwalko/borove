@@ -14,8 +14,16 @@ class MarketController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $userId = optional($request->user('sanctum'))->id;
+
         $query = Product::with(['shop:id,user_id,name', 'shop.user:id,nickname,first_name,last_name'])
             ->withCount('purchaseRequests')
+            ->where(function ($q) use ($userId) {
+                $q->where('status', 'published');
+                if ($userId) {
+                    $q->orWhereHas('shop', fn ($s) => $s->where('user_id', $userId));
+                }
+            })
             ->latest();
 
         if ($request->filled('shop_id')) {

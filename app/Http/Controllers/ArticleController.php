@@ -10,9 +10,15 @@ class ArticleController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $userId = optional($request->user('sanctum'))->id;
+
         $perPage = min((int) $request->input('per_page', 9), 100);
         $paged = Article::orderBy('published_at', 'desc')
-            ->paginate($perPage, ['id', 'slug', 'category', 'title', 'summary', 'author', 'image_seed', 'views', 'published_at']);
+            ->where(function ($q) use ($userId) {
+                $q->where('status', 'published');
+                if ($userId) $q->orWhere('user_id', $userId);
+            })
+            ->paginate($perPage, ['id', 'slug', 'category', 'title', 'summary', 'author', 'image_seed', 'views', 'published_at', 'status', 'user_id']);
 
         return response()->json([
             'data'         => $paged->items(),
@@ -23,9 +29,16 @@ class ArticleController extends Controller
         ]);
     }
 
-    public function show(string $slug): JsonResponse
+    public function show(Request $request, string $slug): JsonResponse
     {
         $article = Article::where('slug', $slug)->firstOrFail();
+
+        $userId = optional($request->user('sanctum'))->id;
+        if ($article->status !== 'published'
+            && (!$userId || (int) $article->user_id !== (int) $userId)) {
+            abort(404);
+        }
+
         $article->increment('views');
 
         return response()->json($article);

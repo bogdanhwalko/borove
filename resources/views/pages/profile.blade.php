@@ -42,8 +42,16 @@
         <div class="profile-content">
           <div class="admin-tabs profile-tabs">
             <button class="admin-tab active" data-ptab="info">&#128100; Дані профілю</button>
+            <button class="admin-tab" data-ptab="rating">&#11088; Рейтинг</button>
             <button class="admin-tab" data-ptab="password">&#128272; Пароль</button>
             <button class="admin-tab" data-ptab="logs">&#128196; Журнал змін</button>
+          </div>
+
+          <div class="profile-tab-section" id="ptabRating" style="display:none">
+            <div class="add-form">
+              <h3>&#11088; Мій рейтинг</h3>
+              <div id="ratingWrap"><p class="admin-loading">Завантаження...</p></div>
+            </div>
           </div>
 
           <div class="profile-tab-section" id="ptabInfo">
