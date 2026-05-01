@@ -15,6 +15,7 @@ class MarketController extends Controller
     public function index(Request $request): JsonResponse
     {
         $userId = optional($request->user('sanctum'))->id;
+        $myOnly = $request->boolean('my');
 
         $query = Product::with(['shop:id,user_id,name', 'shop.user:id,nickname,first_name,last_name'])
             ->withCount('purchaseRequests')
@@ -26,7 +27,9 @@ class MarketController extends Controller
             })
             ->latest();
 
-        if ($request->filled('shop_id')) {
+        if ($myOnly && $userId) {
+            $query->whereHas('shop', fn ($s) => $s->where('user_id', $userId));
+        } elseif ($request->filled('shop_id')) {
             $query->where('shop_id', (int) $request->input('shop_id'));
         }
 

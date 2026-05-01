@@ -1821,6 +1821,7 @@
 
     var urlParams = new URLSearchParams(window.location.search);
     var filterShopId = urlParams.get('shop') ? parseInt(urlParams.get('shop'), 10) : null;
+    var filterMyOnly = urlParams.get('my') === '1';
 
     var user      = getCachedUser();
     var token     = getToken();
@@ -1831,6 +1832,23 @@
     var requestLocks = {};
     var pendingBuyProduct = null;
     var PRODS_PER_PAGE = 9;
+
+    /* when viewing my own products via ?my=1 — show a header */
+    if (filterMyOnly) {
+      var heroElMy = document.querySelector('.page-hero');
+      if (heroElMy) heroElMy.style.display = 'none';
+      var headerElMy = document.getElementById('shopHeader');
+      if (headerElMy) {
+        headerElMy.innerHTML =
+          '<div class="shop-header-banner">' +
+            '<div class="empty-icon">&#128717;</div>' +
+            '<h2 style="margin:8px 0 4px">Моя палатка</h2>' +
+            '<p>Тільки ваші товари (включно з тими, що на модерації)</p>' +
+            '<a href="/shop" class="btn-read" style="margin-top:8px">&#8592; Усі товари базару</a>' +
+          '</div>';
+        headerElMy.style.display = '';
+      }
+    }
 
     /* when viewing a specific shop, hide sidebar and show header */
     if (filterShopId) {
@@ -1895,7 +1913,8 @@
     function loadMoreProds() {
       var nextPage = prodPage + 1;
       var url = '/products?per_page=' + PRODS_PER_PAGE + '&page=' + nextPage;
-      if (filterShopId) url += '&shop_id=' + filterShopId;
+      if (filterMyOnly)      url += '&my=1';
+      else if (filterShopId) url += '&shop_id=' + filterShopId;
 
       var pag = document.getElementById('productPagination');
       if (pag) pag.innerHTML = '<button class="btn-show-more" disabled>Завантаження…</button>';
@@ -2078,9 +2097,12 @@
         || cachedUser.nickname
         || 'Моя палатка';
 
+      // Always use ?my=1 — backend resolves to current user's shop via token
+      var shopHref = '/shop?my=1';
+
       var quickLinks =
         '<div class="shop-quick-links">' +
-          '<a href="/shop?shop=' + shop.id + '" class="shop-quick-link shop-quick-link--shop" title="Відкрити мою палатку">' +
+          '<a href="' + shopHref + '" class="shop-quick-link shop-quick-link--shop" title="Відкрити мою палатку">' +
             '<span class="sql-icon">&#128717;</span>' +
             '<span class="sql-body">' +
               '<span class="sql-label">Моя палатка</span>' +
