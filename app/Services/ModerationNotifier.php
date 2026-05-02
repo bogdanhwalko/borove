@@ -17,7 +17,14 @@ class ModerationNotifier
         $token  = config('services.telegram.bot_token');
         $chatId = config('services.telegram.moderation_chat_id');
 
-        if (!$token || !$chatId) return;
+        if (!$token) {
+            Log::warning('TG moderation notify skipped: TELEGRAM_BOT_TOKEN is empty');
+            return;
+        }
+        if (!$chatId) {
+            Log::warning('TG moderation notify skipped: TELEGRAM_MODERATION_CHAT_ID is empty');
+            return;
+        }
 
         $authorLine = $author
             ? trim(($author->last_name ?? '') . ' ' . ($author->first_name ?? '')) ?: ($author->nickname ?? ('#' . $author->id))
@@ -34,7 +41,7 @@ class ModerationNotifier
               . "<a href=\"{$reviewUrl}\">Відкрити у адмінці</a>";
 
         try {
-            Http::asJson()
+            $response = Http::asJson()
                 ->timeout(5)
                 ->post("https://api.telegram.org/bot{$token}/sendMessage", [
                     'chat_id'    => $chatId,
@@ -42,6 +49,10 @@ class ModerationNotifier
                     'parse_mode' => 'HTML',
                     'disable_web_page_preview' => true,
                 ]);
+
+            if (!$response->successful()) {
+                Log::warning('TG moderation notify HTTP ' . $response->status() . ': ' . $response->body());
+            }
         } catch (\Throwable $e) {
             Log::warning('TG moderation notify failed: ' . $e->getMessage());
         }
