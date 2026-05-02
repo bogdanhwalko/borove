@@ -4447,6 +4447,30 @@ a.shop-name-title:focus { color: var(--p-mid); }
   .profile-avatar { width: 70px; height: 70px; }
   .profile-avatar span { font-size: 1.6rem; }
   .profile-name, .profile-nickname { text-align: left; }
+
+  /* keep form within viewport */
+  .profile-content { width: 100%; max-width: 100%; min-width: 0; }
+  .profile-tab-section { min-width: 0; }
+  .profile-tab-section .add-form { padding: 18px 14px; }
+  .profile-tab-section .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  .profile-tab-section .form-row .form-group { width: 100%; }
+  .profile-tab-section input,
+  .profile-tab-section select,
+  .profile-tab-section textarea {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .profile-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+  }
+  .profile-tabs::-webkit-scrollbar { display: none; }
+  .profile-tabs .admin-tab { white-space: nowrap; flex-shrink: 0; }
 }
 
 /* ── DETAIL PAGES (product / announcement / ride) ─────────── */
