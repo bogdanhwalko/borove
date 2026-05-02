@@ -160,6 +160,164 @@
       .replace(/'/g, '&#039;');
   }
 
+  function safeArticleUrl(url) {
+    var value = String(url || '').trim();
+    if (!value) return '';
+    if (/^(https?:|mailto:|tel:|\/|#)/i.test(value)) return value;
+    return '';
+  }
+
+  function renderArticleInline(text) {
+    var html = escHtml(text || '');
+    html = html.replace(/\[b\]([\s\S]*?)\[\/b\]/gi, '<strong>$1</strong>');
+    html = html.replace(/\[i\]([\s\S]*?)\[\/i\]/gi, '<em>$1</em>');
+    html = html.replace(/\[u\]([\s\S]*?)\[\/u\]/gi, '<u>$1</u>');
+    html = html.replace(/\[url=([^\]\s]+)\]([\s\S]*?)\[\/url\]/gi, function (_, url, label) {
+      var href = safeArticleUrl(url);
+      return href ? '<a href="' + escHtml(href) + '" rel="noopener">' + label + '</a>' : label;
+    });
+    html = html.replace(/\[url\]([^\[\]\s]+)\[\/url\]/gi, function (_, url) {
+      var href = safeArticleUrl(url);
+      return href ? '<a href="' + escHtml(href) + '" rel="noopener">' + escHtml(url) + '</a>' : escHtml(url);
+    });
+    return html;
+  }
+
+  function renderPlainArticleBody(text) {
+    var normalized = String(text || '').replace(/\r\n?/g, '\n').trim();
+    if (!normalized) return '';
+
+    return normalized.split(/\n{2,}/).map(function (block) {
+      var trimmed = block.trim();
+      var h2 = trimmed.match(/^\[h2\]([\s\S]*?)\[\/h2\]$/i);
+      if (h2) return '<h2>' + renderArticleInline(h2[1]) + '</h2>';
+
+      var quote = trimmed.match(/^\[quote\]([\s\S]*?)\[\/quote\]$/i);
+      if (quote) return '<blockquote>' + renderArticleInline(quote[1]).replace(/\n/g, '<br>') + '</blockquote>';
+
+      return '<p>' + renderArticleInline(trimmed).replace(/\n/g, '<br>') + '</p>';
+    }).join('');
+  }
+
+  function sanitizeArticleHtml(html) {
+    var allowed = {
+      a: true, b: true, blockquote: true, br: true, em: true, h2: true, h3: true,
+      i: true, img: true, li: true, ol: true, p: true, strong: true, u: true, ul: true
+    };
+    var blocked = { script: true, style: true, iframe: true, object: true, embed: true };
+    var template = document.createElement('template');
+    template.innerHTML = String(html || '');
+
+    function clean(node) {
+      if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.textContent || '');
+      if (node.nodeType !== Node.ELEMENT_NODE) return document.createDocumentFragment();
+
+      var tag = node.tagName.toLowerCase();
+      if (blocked[tag]) return document.createDocumentFragment();
+
+      var frag;
+      if (!allowed[tag]) {
+        frag = document.createDocumentFragment();
+        Array.prototype.slice.call(node.childNodes).forEach(function (child) {
+          frag.appendChild(clean(child));
+        });
+        return frag;
+      }
+
+      var el = document.createElement(tag);
+      if (tag === 'a') {
+        var href = safeArticleUrl(node.getAttribute('href'));
+        if (href) {
+          el.setAttribute('href', href);
+          el.setAttribute('rel', 'noopener');
+        }
+      } else if (tag === 'img') {
+        var src = safeArticleUrl(node.getAttribute('src'));
+        if (!src) return document.createDocumentFragment();
+        el.setAttribute('src', src);
+        el.setAttribute('alt', node.getAttribute('alt') || '');
+        el.setAttribute('loading', 'lazy');
+        el.className = 'article-inline-img';
+      }
+
+      Array.prototype.slice.call(node.childNodes).forEach(function (child) {
+        el.appendChild(clean(child));
+      });
+      return el;
+    }
+
+    var wrap = document.createElement('div');
+    Array.prototype.slice.call(template.content.childNodes).forEach(function (child) {
+      wrap.appendChild(clean(child));
+    });
+    return wrap.innerHTML;
+  }
+
+  function renderArticleBody(body) {
+    var text = String(body || '');
+    if (/<\/?[a-z][\s\S]*>/i.test(text)) return sanitizeArticleHtml(text);
+    return renderPlainArticleBody(text);
+  }
+
+  function wrapTextareaSelection(textarea, openTag, closeTag, fallback) {
+    var start = textarea.selectionStart || 0;
+    var end = textarea.selectionEnd || 0;
+    var value = textarea.value;
+    var selected = value.slice(start, end) || fallback || '';
+    var insert = openTag + selected + closeTag;
+    textarea.value = value.slice(0, start) + insert + value.slice(end);
+    textarea.focus();
+    textarea.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function attachArticleFormatToolbar(textarea) {
+    if (!textarea || textarea.dataset.articleToolbar === '1') return;
+    textarea.dataset.articleToolbar = '1';
+
+    var toolbar = document.createElement('div');
+    toolbar.className = 'article-format-toolbar';
+
+    [
+      { label: 'B', title: 'Жирний', open: '[b]', close: '[/b]', sample: 'жирний текст' },
+      { label: 'I', title: 'Курсив', open: '[i]', close: '[/i]', sample: 'курсив' },
+      { label: 'H2', title: 'Підзаголовок', open: '[h2]', close: '[/h2]', sample: 'Підзаголовок' },
+      { label: '“”', title: 'Цитата', open: '[quote]', close: '[/quote]', sample: 'Цитата' }
+    ].forEach(function (tool) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'article-format-btn';
+      btn.textContent = tool.label;
+      btn.title = tool.title;
+      btn.addEventListener('click', function () {
+        wrapTextareaSelection(textarea, tool.open, tool.close, tool.sample);
+      });
+      toolbar.appendChild(btn);
+    });
+
+    var linkBtn = document.createElement('button');
+    linkBtn.type = 'button';
+    linkBtn.className = 'article-format-btn';
+    linkBtn.textContent = 'URL';
+    linkBtn.title = 'Посилання';
+    linkBtn.addEventListener('click', function () {
+      var url = window.prompt('Вставте посилання');
+      if (url === null) return;
+      url = safeArticleUrl(url);
+      if (!url) { showToast('Некоректне посилання'); return; }
+      var selected = textarea.value.slice(textarea.selectionStart || 0, textarea.selectionEnd || 0) || 'посилання';
+      wrapTextareaSelection(textarea, '[url=' + url + ']', '[/url]', selected);
+    });
+    toolbar.appendChild(linkBtn);
+
+    textarea.parentNode.insertBefore(toolbar, textarea);
+  }
+
+  function initArticleFormatToolbars() {
+    attachArticleFormatToolbar(document.getElementById('myArtBody'));
+    attachArticleFormatToolbar(document.getElementById('artBody'));
+  }
+
   function pluralUa(n) {
     var mod10 = n % 10, mod100 = n % 100;
     if (mod10 === 1 && mod100 !== 11) return '';
@@ -936,7 +1094,7 @@
             '<span>&#128197; ' + fmtIsoDate(a.published_at) + '</span>' +
             '<span>&#128065; ' + a.views + ' переглядів</span>' +
           '</div>' +
-          a.body +
+          '<div class="article-body-content">' + renderArticleBody(a.body) + '</div>' +
           '<a href="/" class="article-back">&#8592; Повернутись до новин</a>';
       })
       .catch(function () {
@@ -4349,6 +4507,7 @@ function resetAlbums() {
     initProductDetailPage();
     initRequestsPage();
     initMyArticleNewPage();
+    initArticleFormatToolbars();
     initHomeProducts();
     initWeatherWidget();
     initAdminPage();

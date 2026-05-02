@@ -18,7 +18,7 @@ class ArticleController extends Controller
                 $q->where('status', 'published');
                 if ($userId) $q->orWhere('user_id', $userId);
             })
-            ->paginate($perPage, ['id', 'slug', 'category', 'title', 'summary', 'author', 'image_seed', 'views', 'published_at', 'status', 'user_id']);
+            ->paginate($perPage, ['id', 'slug', 'category', 'title', 'summary', 'author', 'image_seed', 'image_path', 'views', 'published_at', 'status', 'user_id']);
 
         return response()->json([
             'data'         => $paged->items(),
