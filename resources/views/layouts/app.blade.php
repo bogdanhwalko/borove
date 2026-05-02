@@ -51,7 +51,7 @@
     <div class="header-date" id="headerDate"></div>
   </div>
   <div class="header-stats-bar">
-    <div class="header-tagline">&#128205; Рівненська область · Зарічненський район</div>
+    <div class="header-tagline">&#128205; Рівненська область · Варашська територіальна громада</div>
     <div class="header-stats">
       <div class="h-stat"><strong>~5500</strong><span>Мешканців</span></div>
       <div class="h-stat"><strong>1600</strong><span>Рік заснування</span></div>
