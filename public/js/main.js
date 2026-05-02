@@ -1084,7 +1084,7 @@
         container.innerHTML =
           '<nav class="article-breadcrumb" aria-label="Навігація">' +
             '<a href="/">Головна</a><span>›</span>' +
-            '<a href="/">Новини</a><span>›</span>' +
+            '<a href="/articles">Новини</a><span>›</span>' +
             escHtml(a.category) +
           '</nav>' +
           '<span class="article-category">' + escHtml(a.category) + '</span>' +
@@ -1095,7 +1095,7 @@
             '<span>&#128065; ' + a.views + ' переглядів</span>' +
           '</div>' +
           '<div class="article-body-content">' + renderArticleBody(a.body) + '</div>' +
-          '<a href="/" class="article-back">&#8592; Повернутись до новин</a>';
+          '<a href="/articles" class="article-back">&#8592; Повернутись до новин</a>';
       })
       .catch(function () {
         container.innerHTML = '<p>Статтю не знайдено або сталася помилка.</p>';
