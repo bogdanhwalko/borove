@@ -1801,8 +1801,13 @@
     var imgHtml = p.photo_path
       ? '<img class="product-card-img product-card-img--clickable" src="' + photoSrc(p.photo_path) + '" alt="' + escHtml(p.title) + '" loading="lazy" data-src="' + photoSrc(p.photo_path) + '" data-alt="' + escHtml(p.title) + '">'
       : '<div class="product-card-img-placeholder">&#128717;</div>';
+    var isPending = p.status === 'pending';
+    var pendingBadge = isPending
+      ? '<div class="product-card-pending-badge">&#9203; На модерації</div>'
+      : '';
     var detailUrl = '/products/' + p.id;
-    return '<div class="product-card fade-in' + (isOwn ? ' product-card--own' : '') + '" data-href="' + detailUrl + '">' +
+    return '<div class="product-card fade-in' + (isOwn ? ' product-card--own' : '') + (isPending ? ' product-card--pending' : '') + '" data-href="' + detailUrl + '">' +
+      pendingBadge +
       imgHtml +
       '<div class="product-card-body">' +
         '<div class="product-card-title"><a href="' + detailUrl + '">' + escHtml(p.title) + '</a></div>' +
@@ -2398,9 +2403,38 @@
     var modalMsg    = document.getElementById('buyMessage');
     var modalOk     = document.getElementById('buyModalConfirm');
     var modalCancel = document.getElementById('buyModalCancel');
+    var delBtn      = document.getElementById('productDeleteBtn');
 
     var productId = parseInt(btn.dataset.id, 10);
     var sellerId  = btn.dataset.sellerId ? parseInt(btn.dataset.sellerId, 10) : null;
+
+    /* if current user is the owner — hide buy button, show delete instead */
+    var cuInit = getCachedUser() || {};
+    var isOwner = sellerId != null && cuInit.id != null && Number(cuInit.id) === sellerId;
+    if (isOwner) {
+      btn.style.display = 'none';
+      if (delBtn) delBtn.style.display = '';
+    }
+
+    if (delBtn) {
+      delBtn.addEventListener('click', function () {
+        if (!confirm('Видалити цей товар? Цю дію не можна скасувати.')) return;
+        var token = getToken();
+        if (!token) { showToast('Увійдіть'); return; }
+        delBtn.disabled = true;
+        apiFetch('DELETE', '/my/shop/products/' + productId, null, token)
+          .then(function (r) {
+            if (!r.ok) return r.json().then(function (d) {
+              throw new Error(d && d.message ? d.message : 'Помилка');
+            });
+          })
+          .then(function () {
+            showToast('✓ Товар видалено');
+            setTimeout(function () { window.location.href = '/shop?my=1'; }, 800);
+          })
+          .catch(function (err) { showToast(err.message || 'Помилка'); delBtn.disabled = false; });
+      });
+    }
 
     btn.addEventListener('click', function () {
       var token = getToken();

@@ -4559,6 +4559,40 @@ a.shop-name-title:focus { color: var(--p-mid); }
   box-shadow: var(--sh-sm, 0 6px 14px rgba(0,0,0,.08));
 }
 
+/* ── PENDING / MODERATION VISUAL CUES ────────────────────── */
+.product-card { position: relative; }
+.product-card--pending { opacity: .85; }
+.product-card--pending .product-card-img,
+.product-card--pending .product-card-img-placeholder {
+  filter: grayscale(.4) saturate(.8);
+}
+.product-card-pending-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  background: rgba(255, 173, 0, .95);
+  color: #2a1500;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .15);
+  pointer-events: none;
+}
+
+.product-detail-pending {
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  background: rgba(255, 173, 0, .15);
+  border-left: 4px solid #f5a623;
+  border-radius: 6px;
+  font-size: .9rem;
+  color: #5a3a00;
+}
+
 /* ── PRIMARY INLINE CTA BUTTON (link-friendly) ───────────── */
 .btn-cta {
   display: inline-flex;

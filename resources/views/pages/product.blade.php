@@ -85,6 +85,10 @@
             @endif
           </div>
 
+          @if($product->status === 'pending')
+            <div class="product-detail-pending">&#9203; Цей товар на модерації — він видимий лише вам, поки адміністратор не схвалить</div>
+          @endif
+
           <div class="product-detail-actions">
             <button id="productBuyBtn"
                     class="btn-submit"
@@ -92,6 +96,13 @@
                     data-title="{{ $product->title }}"
                     data-seller-id="{{ optional($product->shop)->user_id }}">
               &#128222; Бажаю купити
+            </button>
+            <button id="productDeleteBtn"
+                    class="btn-cancel"
+                    data-id="{{ $product->id }}"
+                    data-seller-id="{{ optional($product->shop)->user_id }}"
+                    style="display:none">
+              &#128465; Видалити товар
             </button>
           </div>
         </div>
